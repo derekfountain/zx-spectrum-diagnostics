@@ -1,0 +1,81 @@
+AM says I can measure the -5V rail with
+
+
+
+  +5V--------+----------
+             |         
+             |         
+                       
+            R1         
+                       
+             |         
+             |         
+             +---------- V(measured)
+             |         
+             |         
+                       
+            R2         
+                       
+             |         
+             |         
+  -5V--------+----------
+
+If I know 5V then 
+
+
+V(-5) = 2*V(measured) - V(5)
+
+Example:
+
++5V is 5.00
+-5V is -1.00
+
+That's 3V dropped across each resistor (6V dropped in total).
+So 3V dropped across R1.
+Measured voltage will be 5.00-3.00=2.00
+
+V(-5) = 2*2.00 - 5.00
+
+V(-5) = 4-5 = -1
+
+So it seems to work.
+
+It makes sense. V(measured) is the voltage across one resistor, so
+if the resistors are the same then double that is the voltage across
+both resistors, which is +5V to -5V.
+
+
+AM added that a diode is needed to protect it in case -5V is there
+but +5 isn't. And another for the positive side.
+
+
+  +5V--------+----------
+             |         
+             |         
+                       
+            R1     3V3 
+                    |  
+             |      D2 
+             |      |  
+             +---------- V(measured)
+             |      |  
+             |     D1  
+                    |  
+            R2     GND 
+                       
+             |         
+             |         
+  -5V--------+----------
+
+In this case, with +5V at 0V, without D2 there's a potential difference
+between the Pico pin (set as input) and the -5V rail, so 
+current would follow out of the Pico to -5V. That would probably
+not do the Pico any good, so the diode will stop it. The current would
+flow from GND, through D1 and R2, to -5V.
+
+If -5V were to fail, but +5V remained (assume a broken track or something)
+then 5V would flow through R1, and 1V8 would flow to the 3V3 rail via D2.
+That would put 3V3 into the Pico's ADC.
+
+Forward voltage of 1N4148 is 0.72V so that needs to be taken
+into account, somehow.
