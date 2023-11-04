@@ -1,5 +1,5 @@
 (sym_lib_table
   (lib (name "ZX Bus")(type "Legacy")(uri "${KIPRJMOD}/zxbus.lib")(options "")(descr ""))
-  (lib (name "PMBT2222")(type "KiCad")(uri "${KIPRJMOD}/pmbt2222a.kicad_sym")(options "")(descr ""))
   (lib (name "Pico")(type "KiCad")(uri "${KIPRJMOD}/KiCad-RP-Pico/RP-Pico Libraries/MCU_RaspberryPi_and_Boards.kicad_sym")(options "")(descr ""))
+  (lib (name "pmbt2222a")(type "KiCad")(uri "${KIPRJMOD}/pmbt2222a.kicad_sym")(options "")(descr ""))
 )
