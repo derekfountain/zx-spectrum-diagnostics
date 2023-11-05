@@ -3040,7 +3040,7 @@
     (property "Value" "1N4148" (id 1) (at 262.128 93.7259 90)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Footprint" "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder" (id 2) (at 259.842 92.456 0)
+    (property "Footprint" "Diode_SMD:D_SOD-123" (id 2) (at 259.842 92.456 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/1N4148_1N4448.pdf" (id 3) (at 259.842 92.456 0)
@@ -3059,7 +3059,7 @@
     (property "Value" "1N4148" (id 1) (at 262.128 86.1059 90)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Footprint" "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder" (id 2) (at 259.842 84.836 0)
+    (property "Footprint" "Diode_SMD:D_SOD-123" (id 2) (at 259.842 84.836 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/1N4148_1N4448.pdf" (id 3) (at 259.842 84.836 0)
@@ -3409,10 +3409,10 @@
       (reference "D101") (unit 1) (value "D_Schottky") (footprint "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder")
     )
     (path "/d9d4c412-10f6-47b7-9c11-43e0dd422b75"
-      (reference "D102") (unit 1) (value "1N4148") (footprint "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder")
+      (reference "D102") (unit 1) (value "1N4148") (footprint "Diode_SMD:D_SOD-123")
     )
     (path "/d3364c3f-7456-4539-86a5-d88591e950f5"
-      (reference "D103") (unit 1) (value "1N4148") (footprint "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder")
+      (reference "D103") (unit 1) (value "1N4148") (footprint "Diode_SMD:D_SOD-123")
     )
     (path "/4306a88c-b446-420a-8a4d-c6b820db0ec2"
       (reference "J101") (unit 1) (value "Conn_01x04") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical")
