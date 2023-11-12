@@ -29,8 +29,15 @@ https://github.com/derekfountain/pico-sh1106-oled
 #include "font.h"
 #include <string.h>
 
+/*
+ * Format
+ * <height>, <width>, <additional spacing per char>, 
+ * <first ascii char>, <last ascii char>,
+ * <data>
+ */
 const uint8_t font_8x5[] =
 {
+			8, 5, 1, 32, 126,
 			0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x5F, 0x00, 0x00,
 			0x00, 0x07, 0x00, 0x07, 0x00,
@@ -143,7 +150,4 @@ char* FONTS_GetStringSize(char* str, FONTS_SIZE_t* SizeStruct, FontDef_t* Font) 
 	/* Return pointer */
 	return str;
 }
-
-
-
 

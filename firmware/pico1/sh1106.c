@@ -393,3 +393,42 @@ void sh1106_I2C_Write(uint8_t address, uint8_t reg, uint8_t data) {
   i2c_write_blocking(i2c_default, address, dt, 2, 10);
 
 }
+
+
+
+
+
+
+
+
+
+void draw_char_with_font(uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char c, bool invert)
+{
+  if(c<font[3]||c>font[4])
+    return;
+  
+  uint32_t parts_per_line=(font[0]>>3)+((font[0]&7)>0);
+
+  for(uint8_t w=0; w<font[1]; ++w)     // width
+  {
+    // font[1] is the height, font[3] is additional spacing between chars
+
+    uint32_t pp=(c-font[3])*font[1]*parts_per_line+w*parts_per_line+5;  
+    
+    for(uint32_t lp=0; lp<parts_per_line; ++lp)
+    {
+      uint8_t line=font[pp];
+      
+      for(int8_t j=0; j<8; ++j, line>>=1)
+      {
+	if(line & 1)
+	{
+	    SH1106_DrawPixel(x+w, y+((lp<<3)+j), (SH1106_COLOR_t)1 );
+	  //ssd1306_draw_filled_square(p, x+w*scale, y+((lp<<3)+j)*scale, scale, scale);
+	}
+      }
+	
+      ++pp;
+    }
+  }
+}

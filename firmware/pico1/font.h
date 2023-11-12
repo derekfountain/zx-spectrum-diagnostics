@@ -42,6 +42,7 @@ typedef struct {
 } FONTS_SIZE_t;
 
 extern FontDef_t Font_8x5;
+extern const uint8_t font_8x5[];
 char* FONTS_GetStringSize(char* str, FONTS_SIZE_t* SizeStruct, FontDef_t* Font);
 
 #endif

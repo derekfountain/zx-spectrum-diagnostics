@@ -36,6 +36,8 @@ https://github.com/derekfountain/pico-sh1106-oled
 #include "sh1106.h"
 
 
+void draw_char_with_font(uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char c, bool invert);
+
 int main()
 {  
   stdio_init_all();
@@ -49,7 +51,13 @@ int main()
   SH1106_Init();
 
   SH1106_GotoXY(0,0);
-  SH1106_Puts("L", &Font_8x5, 1);
+  draw_char_with_font(0,   0,  1, font_8x5, 'X', 0);
+  draw_char_with_font(123, 0,  1, font_8x5, 'X', 0);
+  draw_char_with_font(0,   56, 1, font_8x5, 'X', 0);
+  draw_char_with_font(123, 56, 1, font_8x5, 'X', 0);
+
+/*
+  SH1106_Puts("X", font_8x5, 1);
 
   SH1106_GotoXY(120,0);
   SH1106_Puts("X", &Font_8x5, 1);
@@ -59,7 +67,7 @@ int main()
 
   SH1106_GotoXY(120,53);
   SH1106_Puts("X", &Font_8x5, 1);
-
+*/
   uint16_t x;
   for( x=11; x<118; x++ )
     SH1106_DrawPixel( x, 4, 1);
