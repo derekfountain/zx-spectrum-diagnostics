@@ -49,16 +49,16 @@ int main()
   SH1106_Init();
 
   SH1106_GotoXY(0,0);
-  SH1106_Puts("X", &Font_7x10, 1);
+  SH1106_Puts("L", &Font_8x5, 1);
 
   SH1106_GotoXY(120,0);
-  SH1106_Puts("X", &Font_7x10, 1);
+  SH1106_Puts("X", &Font_8x5, 1);
 
   SH1106_GotoXY(0,53);
-  SH1106_Puts("X", &Font_7x10, 1);
+  SH1106_Puts("X", &Font_8x5, 1);
 
   SH1106_GotoXY(120,53);
-  SH1106_Puts("X", &Font_7x10, 1);
+  SH1106_Puts("X", &Font_8x5, 1);
 
   uint16_t x;
   for( x=11; x<118; x++ )

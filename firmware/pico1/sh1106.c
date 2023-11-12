@@ -295,6 +295,31 @@ char SH1106_Putc(char ch, FontDef_t* Font, SH1106_COLOR_t color) {
 		return 0;
 	}
 	
+
+  uint32_t parts_per_line=(Font->FontHeight>>3)+((Font->FontHeight&7)>0);
+
+  for(uint8_t w=0; w<Font->FontWidth; ++w)     // width
+  {
+    uint32_t pp=(ch-0) * Font->FontHeight * parts_per_line + w*parts_per_line;  
+    
+    for(uint32_t lp=0; lp<parts_per_line; ++lp)
+    {
+      uint8_t line=Font->data[pp];
+      
+      for(int8_t j=0; j<8; ++j, line>>=1)
+      {
+	if(line & 1)
+	{
+	  SH1106_DrawPixel(SH1106.CurrentX+w, SH1106.CurrentY+((lp<<3)+j), (SH1106_COLOR_t) color );
+	}
+      }
+	
+      ++pp;
+    }
+  }
+
+
+#if 0
 	/* Go through font */
 	for (i = 0; i < Font->FontHeight; i++) {
 		b = Font->data[(ch - 32) * Font->FontHeight + i];
@@ -306,6 +331,7 @@ char SH1106_Putc(char ch, FontDef_t* Font, SH1106_COLOR_t color) {
 			}
 		}
 	}
+#endif
 	
 	/* Increase pointer */
 	SH1106.CurrentX += Font->FontWidth;
