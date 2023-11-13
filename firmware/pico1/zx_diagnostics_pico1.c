@@ -13,8 +13,6 @@ void main( void )
 {
   bi_decl(bi_program_description("ZX Spectrum Diagnostics Pico1 Board Binary."));
 
-  stdio_init_all();
-
   /* Initialise OLED screen with default font */
   init_oled( NULL );
   

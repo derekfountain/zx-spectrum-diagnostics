@@ -16,6 +16,6 @@ add_executable(pico1
 	page_voltages.c
 )
 
-target_link_libraries(pico1 pico_stdlib hardware_i2c)
+target_link_libraries(pico1 pico_stdlib hardware_i2c hardware_adc)
 
 pico_add_extra_outputs(pico1)

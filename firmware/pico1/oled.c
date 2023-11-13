@@ -12,10 +12,10 @@ static const uint8_t *font;
 int init_oled( const uint8_t *f )
 {  
   i2c_init(i2c_default, 400 * 1000);
-  gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-  gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-  gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-  gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+  gpio_set_function( 16, GPIO_FUNC_I2C );
+  gpio_set_function( 17, GPIO_FUNC_I2C );
+  gpio_pull_up( 16 );
+  gpio_pull_up( 17 );
     
   SH1106_Init();
 
@@ -31,6 +31,12 @@ int init_oled( const uint8_t *f )
 void draw_pixel( uint32_t x, uint32_t y )
 {
   SH1106_DrawPixel(x, y, (SH1106_COLOR_t)1 );
+}
+
+
+void clear_pixel( uint32_t x, uint32_t y )
+{
+  SH1106_DrawPixel(x, y, (SH1106_COLOR_t)0 );
 }
 
 
@@ -57,6 +63,10 @@ void draw_char(uint32_t x, uint32_t y, uint8_t c )
 	{
 	  draw_pixel( x+w, y+((lp<<3)+j) );
 	}
+	else
+	{
+	  clear_pixel( x+w, y+((lp<<3)+j) );
+	}
       }
 	
       ++pp;
@@ -81,4 +91,10 @@ void draw_str( uint32_t x, uint32_t y, uint8_t *str )
 void update_screen( void )
 {
   SH1106_UpdateScreen();
+}
+
+
+void clear_screen( void )
+{
+  SH1106_Clear();
 }
