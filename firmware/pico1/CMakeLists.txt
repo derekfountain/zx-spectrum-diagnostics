@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 add_executable(pico1
+	zx_diagnostics_pico1.c
         font.c	
         sh1106.c
         oled.c

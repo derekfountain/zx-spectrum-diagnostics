@@ -1,31 +1,3 @@
-/*
-
-MIT License
-
-Copyright (c) 2021 David Schramm
-Copyright (c) 2023 Derek Fountain
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-https://github.com/derekfountain/pico-sh1106-oled
-*/
-
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -35,13 +7,10 @@ https://github.com/derekfountain/pico-sh1106-oled
 #include "font.h"
 #include "sh1106.h"
 
+static const uint8_t *font;
 
-void draw_char_with_font(uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char c, bool invert);
-
-int main()
+int init_oled( const uint8_t *f )
 {  
-  stdio_init_all();
-
   i2c_init(i2c_default, 400 * 1000);
   gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
   gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
@@ -50,34 +19,66 @@ int main()
     
   SH1106_Init();
 
-  SH1106_GotoXY(0,0);
-  draw_char_with_font(0,   0,  1, font_8x5, 'X', 0);
-  draw_char_with_font(123, 0,  1, font_8x5, 'X', 0);
-  draw_char_with_font(0,   56, 1, font_8x5, 'X', 0);
-  draw_char_with_font(123, 56, 1, font_8x5, 'X', 0);
-
-/*
-  SH1106_Puts("X", font_8x5, 1);
-
-  SH1106_GotoXY(120,0);
-  SH1106_Puts("X", &Font_8x5, 1);
-
-  SH1106_GotoXY(0,53);
-  SH1106_Puts("X", &Font_8x5, 1);
-
-  SH1106_GotoXY(120,53);
-  SH1106_Puts("X", &Font_8x5, 1);
-*/
-  uint16_t x;
-  for( x=11; x<118; x++ )
-    SH1106_DrawPixel( x, 4, 1);
-
-  SH1106_UpdateScreen();
-
-  while (1)
-  {
-    sleep_ms(1000);
-  }
+  if( f )
+    font = f;
+  else
+    font = font_8x5;
 
   return 0;
+}
+
+
+void draw_pixel( uint32_t x, uint32_t y )
+{
+  SH1106_DrawPixel(x, y, (SH1106_COLOR_t)1 );
+}
+
+
+void draw_char(uint32_t x, uint32_t y, uint8_t c )
+{
+  if(c<font[3]||c>font[4])
+    return;
+  
+  uint32_t parts_per_line=(font[0]>>3)+((font[0]&7)>0);
+
+  for(uint8_t w=0; w<font[1]; ++w)     // width
+  {
+    // font[0] is the height, font[3] is first char in font
+
+    uint32_t pp=(c-font[3])*font[1]*parts_per_line+w*parts_per_line+5;  
+    
+    for(uint32_t lp=0; lp<parts_per_line; ++lp)
+    {
+      uint8_t line=font[pp];
+      
+      for(int8_t j=0; j<8; ++j, line>>=1)
+      {
+	if(line & 1)
+	{
+	  draw_pixel( x+w, y+((lp<<3)+j) );
+	}
+      }
+	
+      ++pp;
+    }
+  }
+}
+
+
+void draw_str( uint32_t x, uint32_t y, uint8_t *str )
+{
+  uint8_t *next_char = str;
+
+  while( *next_char )
+  {
+    draw_char( x, y, *next_char++ );
+    x += (font[1]+font[2]);
+  }
+
+}
+
+
+void update_screen( void )
+{
+  SH1106_UpdateScreen();
 }

@@ -58,117 +58,6 @@ typedef struct {
 /* Private variable */
 static SH1106_t SH1106;
 
-
-#define SH1106_RIGHT_HORIZONTAL_SCROLL              0x26
-#define SH1106_LEFT_HORIZONTAL_SCROLL               0x27
-#define SH1106_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL 0x29
-#define SH1106_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL  0x2A
-#define SH1106_DEACTIVATE_SCROLL                    0x2E // Stop scroll
-#define SH1106_ACTIVATE_SCROLL                      0x2F // Start scroll
-#define SH1106_SET_VERTICAL_SCROLL_AREA             0xA3 // Set scroll range
-
-#define SH1106_NORMALDISPLAY       0xA6
-#define SH1106_INVERTDISPLAY       0xA7
-
-
-void SH1106_ScrollRight(uint8_t start_row, uint8_t end_row)
-{
-  SH1106_WRITECOMMAND (SH1106_RIGHT_HORIZONTAL_SCROLL);  // send 0x26
-  SH1106_WRITECOMMAND (0x00);  // send dummy
-  SH1106_WRITECOMMAND(start_row);  // start page address
-  SH1106_WRITECOMMAND(0X00);  // time interval 5 frames
-  SH1106_WRITECOMMAND(end_row);  // end page address
-  SH1106_WRITECOMMAND(0X00);
-  SH1106_WRITECOMMAND(0XFF);
-  SH1106_WRITECOMMAND (SH1106_ACTIVATE_SCROLL); // start scroll
-}
-
-
-void SH1106_ScrollLeft(uint8_t start_row, uint8_t end_row)
-{
-  SH1106_WRITECOMMAND (SH1106_LEFT_HORIZONTAL_SCROLL);  // send 0x26
-  SH1106_WRITECOMMAND (0x00);  // send dummy
-  SH1106_WRITECOMMAND(start_row);  // start page address
-  SH1106_WRITECOMMAND(0X00);  // time interval 5 frames
-  SH1106_WRITECOMMAND(end_row);  // end page address
-  SH1106_WRITECOMMAND(0X00);
-  SH1106_WRITECOMMAND(0XFF);
-  SH1106_WRITECOMMAND (SH1106_ACTIVATE_SCROLL); // start scroll
-}
-
-
-void SH1106_Scrolldiagright(uint8_t start_row, uint8_t end_row)
-{
-  SH1106_WRITECOMMAND(SH1106_SET_VERTICAL_SCROLL_AREA);  // sect the area
-  SH1106_WRITECOMMAND (0x00);   // write dummy
-  SH1106_WRITECOMMAND(SH1106_HEIGHT);
-
-  SH1106_WRITECOMMAND(SH1106_VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL);
-  SH1106_WRITECOMMAND (0x00);
-  SH1106_WRITECOMMAND(start_row);
-  SH1106_WRITECOMMAND(0X00);
-  SH1106_WRITECOMMAND(end_row);
-  SH1106_WRITECOMMAND (0x01);
-  SH1106_WRITECOMMAND (SH1106_ACTIVATE_SCROLL);
-}
-
-
-void SH1106_Scrolldiagleft(uint8_t start_row, uint8_t end_row)
-{
-  SH1106_WRITECOMMAND(SH1106_SET_VERTICAL_SCROLL_AREA);  // sect the area
-  SH1106_WRITECOMMAND (0x00);   // write dummy
-  SH1106_WRITECOMMAND(SH1106_HEIGHT);
-
-  SH1106_WRITECOMMAND(SH1106_VERTICAL_AND_LEFT_HORIZONTAL_SCROLL);
-  SH1106_WRITECOMMAND (0x00);
-  SH1106_WRITECOMMAND(start_row);
-  SH1106_WRITECOMMAND(0X00);
-  SH1106_WRITECOMMAND(end_row);
-  SH1106_WRITECOMMAND (0x01);
-  SH1106_WRITECOMMAND (SH1106_ACTIVATE_SCROLL);
-}
-
-
-void SH1106_Stopscroll(void)
-{
-	SH1106_WRITECOMMAND(SH1106_DEACTIVATE_SCROLL);
-}
-
-
-
-void SH1106_InvertDisplay (int i)
-{
-  if (i) SH1106_WRITECOMMAND (SH1106_INVERTDISPLAY);
-
-  else SH1106_WRITECOMMAND (SH1106_NORMALDISPLAY);
-
-}
-
-
-void SH1106_DrawBitmap(int16_t x, int16_t y, const unsigned char* bitmap, int16_t w, int16_t h, uint16_t color)
-{
-
-    int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
-    uint8_t byte = 0;
-
-    for(int16_t j=0; j<h; j++, y++)
-    {
-        for(int16_t i=0; i<w; i++)
-        {
-            if(i & 7)
-            {
-               byte <<= 1;
-            }
-            else
-            {
-               byte = (*(const unsigned char *)(&bitmap[j * byteWidth + i / 8]));
-            }
-            if(byte & 0x80) SH1106_DrawPixel(x+i, y, color);
-        }
-    }
-}
-
-
 uint8_t SH1106_Init(void) {
 	/* A little delay */
 	uint32_t p = 2500;
@@ -206,8 +95,6 @@ uint8_t SH1106_Init(void) {
 	SH1106_WRITECOMMAND(0xAF); //--turn on SH1106 panel
 	
 
-	SH1106_WRITECOMMAND(SH1106_DEACTIVATE_SCROLL);
-
 	/* Clear screen */
 	SH1106_Fill(SH1106_COLOR_BLACK);
 	
@@ -238,18 +125,6 @@ void SH1106_UpdateScreen(void) {
 	}
 }
 
-void SH1106_ToggleInvert(void) {
-	uint16_t i;
-	
-	/* Toggle invert */
-	SH1106.Inverted = !SH1106.Inverted;
-	
-	/* Do memory toggle */
-	for (i = 0; i < sizeof(SH1106_Buffer); i++) {
-		SH1106_Buffer[i] = ~SH1106_Buffer[i];
-	}
-}
-
 void SH1106_Fill(SH1106_COLOR_t color) {
 	/* Set memory */
 	memset(SH1106_Buffer, (color == SH1106_COLOR_BLACK) ? 0x00 : 0xFF, sizeof(SH1106_Buffer));
@@ -277,158 +152,27 @@ void SH1106_DrawPixel(uint16_t x, uint16_t y, SH1106_COLOR_t color) {
 	}
 }
 
-void SH1106_GotoXY(uint16_t x, uint16_t y) {
-	/* Set write pointers */
-	SH1106.CurrentX = x;
-	SH1106.CurrentY = y;
-}
-
-char SH1106_Putc(char ch, FontDef_t* Font, SH1106_COLOR_t color) {
-	uint32_t i, b, j;
-	
-	/* Check available space in LCD */
-	if (
-		SH1106_WIDTH <= (SH1106.CurrentX + Font->FontWidth) ||
-		SH1106_HEIGHT <= (SH1106.CurrentY + Font->FontHeight)
-	) {
-		/* Error */
-		return 0;
-	}
-	
-
-  uint32_t parts_per_line=(Font->FontHeight>>3)+((Font->FontHeight&7)>0);
-
-  for(uint8_t w=0; w<Font->FontWidth; ++w)     // width
-  {
-    uint32_t pp=(ch-0) * Font->FontHeight * parts_per_line + w*parts_per_line;  
-    
-    for(uint32_t lp=0; lp<parts_per_line; ++lp)
-    {
-      uint8_t line=Font->data[pp];
-      
-      for(int8_t j=0; j<8; ++j, line>>=1)
-      {
-	if(line & 1)
-	{
-	  SH1106_DrawPixel(SH1106.CurrentX+w, SH1106.CurrentY+((lp<<3)+j), (SH1106_COLOR_t) color );
-	}
-      }
-	
-      ++pp;
-    }
-  }
-
-
-#if 0
-	/* Go through font */
-	for (i = 0; i < Font->FontHeight; i++) {
-		b = Font->data[(ch - 32) * Font->FontHeight + i];
-		for (j = 0; j < Font->FontWidth; j++) {
-			if ((b << j) & 0x8000) {
-				SH1106_DrawPixel(SH1106.CurrentX + j, (SH1106.CurrentY + i), (SH1106_COLOR_t) color);
-			} else {
-				SH1106_DrawPixel(SH1106.CurrentX + j, (SH1106.CurrentY + i), (SH1106_COLOR_t)!color);
-			}
-		}
-	}
-#endif
-	
-	/* Increase pointer */
-	SH1106.CurrentX += Font->FontWidth;
-	
-	/* Return character written */
-	return ch;
-}
-
-char SH1106_Puts(char* str, FontDef_t* Font, SH1106_COLOR_t color) {
-	/* Write characters */
-	while (*str) {
-		/* Write character by character */
-		if (SH1106_Putc(*str, Font, color) != *str) {
-			/* Return error */
-			return *str;
-		}
-		
-		/* Increase string pointer */
-		str++;
-	}
-	
-	/* Everything OK, zero should be returned */
-	return *str;
-}
- 
 void SH1106_Clear (void)
 {
-	SH1106_Fill (0);
+    SH1106_Fill (0);
     SH1106_UpdateScreen();
-}
-void SH1106_ON(void) {
-	SH1106_WRITECOMMAND(0x8D);  
-	SH1106_WRITECOMMAND(0x14);  
-	SH1106_WRITECOMMAND(0xAF);  
-}
-void SH1106_OFF(void) {
-	SH1106_WRITECOMMAND(0x8D);  
-	SH1106_WRITECOMMAND(0x10);
-	SH1106_WRITECOMMAND(0xAE);  
 }
 
 void sh1106_I2C_WriteMulti(uint8_t address, uint8_t reg, uint8_t* data, uint16_t count) {
-uint8_t dt[256];
-dt[0] = reg;
-uint8_t i;
-for(i = 0; i < count; i++)
-dt[i+1] = data[i];
-//HAL_I2C_Master_Transmit(&hi2c1, address, dt, count+1, 10);
-	i2c_write_blocking(i2c_default, address, dt, count+1, 10);
-
+  uint8_t dt[256];
+  dt[0] = reg;
+  uint8_t i;
+  for(i = 0; i < count; i++)
+    dt[i+1] = data[i];
+  i2c_write_blocking(i2c_default, address, dt, count+1, 10);
 }
 
 
 void sh1106_I2C_Write(uint8_t address, uint8_t reg, uint8_t data) {
-	uint8_t dt[2];
-	dt[0] = reg;
-	dt[1] = data;
-	//HAL_I2C_Master_Transmit(&hi2c1, address, dt, 2, 10);
+  uint8_t dt[2];
+  dt[0] = reg;
+  dt[1] = data;
   i2c_write_blocking(i2c_default, address, dt, 2, 10);
-
 }
 
 
-
-
-
-
-
-
-
-void draw_char_with_font(uint32_t x, uint32_t y, uint32_t scale, const uint8_t *font, char c, bool invert)
-{
-  if(c<font[3]||c>font[4])
-    return;
-  
-  uint32_t parts_per_line=(font[0]>>3)+((font[0]&7)>0);
-
-  for(uint8_t w=0; w<font[1]; ++w)     // width
-  {
-    // font[1] is the height, font[3] is additional spacing between chars
-
-    uint32_t pp=(c-font[3])*font[1]*parts_per_line+w*parts_per_line+5;  
-    
-    for(uint32_t lp=0; lp<parts_per_line; ++lp)
-    {
-      uint8_t line=font[pp];
-      
-      for(int8_t j=0; j<8; ++j, line>>=1)
-      {
-	if(line & 1)
-	{
-	    SH1106_DrawPixel(x+w, y+((lp<<3)+j), (SH1106_COLOR_t)1 );
-	  //ssd1306_draw_filled_square(p, x+w*scale, y+((lp<<3)+j)*scale, scale, scale);
-	}
-      }
-	
-      ++pp;
-    }
-  }
-}
