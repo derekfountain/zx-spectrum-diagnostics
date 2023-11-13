@@ -4,6 +4,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 
+#include "gpios.h"
 #include "font.h"
 #include "sh1106.h"
 
@@ -12,10 +13,10 @@ static const uint8_t *font;
 int init_oled( const uint8_t *f )
 {  
   i2c_init(i2c_default, 400 * 1000);
-  gpio_set_function( 16, GPIO_FUNC_I2C );
-  gpio_set_function( 17, GPIO_FUNC_I2C );
-  gpio_pull_up( 16 );
-  gpio_pull_up( 17 );
+  gpio_set_function( GPIO_OLED_SDA, GPIO_FUNC_I2C );
+  gpio_set_function( GPIO_OLED_SCK, GPIO_FUNC_I2C );
+  gpio_pull_up( GPIO_OLED_SDA );
+  gpio_pull_up( GPIO_OLED_SCK );
     
   SH1106_Init();
 
