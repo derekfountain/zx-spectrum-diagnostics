@@ -79,3 +79,21 @@ That would put 3V3 into the Pico's ADC.
 
 Forward voltage of 1N4148 is 0.72V so that needs to be taken
 into account, somehow.
+
+
+
+
+Test pages
+==========
+
+UI will consist of pages. Flick between pages with the buttons.
+
+Page 1 will be voltages
+Page 2 will be Z80 control bus
+...
+
+Enter page function
+Exit page function
+Run tests function
+Pause between test runs (ms)
+Next page?
