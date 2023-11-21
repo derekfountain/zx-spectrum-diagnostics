@@ -1,0 +1,13 @@
+v1.0 First board sent for fabrication
+=====================================
+
+Wrong footprint for the Spectrum edge connector. I used
+zxbus:ZX_Bus_Pin_Header, which is two rows of pin headers.
+I should have used zxedge:Spectrum_Edge_Connector, which is
+the correctly spaced footprint, which larger holes.
+
+I forgot the label in the silkscreen. Need to add a v1.1 to the next one.
+
+Break the signals which would do damage to the Pico out to another
+connector header, so they aren't so easy to get wrong. +5V, -5V, +9V and
++12V are the obvious ones. There might be others.
