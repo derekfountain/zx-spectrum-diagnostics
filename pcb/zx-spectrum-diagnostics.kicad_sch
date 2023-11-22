@@ -1063,7 +1063,6 @@
     )
   )
 
-
   (junction (at 67.818 37.592) (diameter 0) (color 0 0 0 0)
     (uuid 110b8342-d882-4a91-9b29-b063ec3a576d)
   )
@@ -2442,7 +2441,7 @@
     (property "Value" "ZX48Bus" (id 1) (at 39.37 20.32 0)
       (effects (font (size 0.9906 0.9906)))
     )
-    (property "Footprint" "zxbus:ZX_Bus_Pin_Header" (id 2) (at 30.48 103.632 0)
+    (property "Footprint" "zxedge:Spectrum_Edge_Connector" (id 2) (at 30.48 103.632 0)
       (effects (font (size 0.9906 0.9906)) hide)
     )
     (property "Datasheet" "" (id 3) (at 30.48 103.632 0)
@@ -3475,7 +3474,7 @@
       (reference "U102") (unit 1) (value "Pico") (footprint "Pico:RPi_Pico_SMD_TH")
     )
     (path "/28a893db-1c35-4c03-b308-f54ebb07c369"
-      (reference "Z101") (unit 1) (value "ZX48Bus") (footprint "zxbus:ZX_Bus_Pin_Header")
+      (reference "Z101") (unit 1) (value "ZX48Bus") (footprint "zxedge:Spectrum_Edge_Connector")
     )
   )
 )
