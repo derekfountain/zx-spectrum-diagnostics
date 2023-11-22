@@ -1,4 +1,5 @@
 (fp_lib_table
   (lib (name "zxbus")(type "KiCad")(uri "${KIPRJMOD}/zxbus.pretty")(options "")(descr ""))
   (lib (name "Pico")(type "KiCad")(uri "${KIPRJMOD}/KiCad-RP-Pico/RP-Pico Libraries/MCU_RaspberryPi_and_Boards.pretty")(options "")(descr ""))
+  (lib (name "zxedge")(type "KiCad")(uri "${KIPRJMOD}/zxedge.pretty")(options "")(descr ""))
 )
