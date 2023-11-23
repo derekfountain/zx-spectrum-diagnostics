@@ -14,6 +14,7 @@ add_executable(pico1
         sh1106.c
         oled.c
 	page_voltages.c
+	page_ula.c
 )
 
 target_link_libraries(pico1 pico_stdlib hardware_i2c hardware_adc)

@@ -93,6 +93,7 @@ static page_t voltage_page =
   voltage_page_entry,
   voltage_page_exit,
   voltage_page_test,
+  NULL,
   1000,
 };
 

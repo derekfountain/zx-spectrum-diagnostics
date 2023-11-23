@@ -7,6 +7,7 @@
 #include "gpios.h"
 
 #include "page_voltages.h"
+#include "page_ula.h"
 
 static page_t *current_page;
 
@@ -51,6 +52,13 @@ void gpios_callback( uint gpio, uint32_t events )
       debounce_timestamp_us = get_time_us();
     }
   }
+  else
+  {
+    if( current_page->gpios_fn != NULL )
+    {
+      (current_page->gpios_fn)( gpio, events );
+    }
+  }
 }
 
 
@@ -62,6 +70,8 @@ void main( void )
 
   /* Initialise OLED screen with default font */
   init_oled( NULL );
+
+  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
   
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
   gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
@@ -69,7 +79,7 @@ void main( void )
   gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_FALL, true, &gpios_callback );
   gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_FALL, true );
 
-  current_page = get_voltage_page();
+  current_page = get_ula_page();
   (current_page->entry_fn)();
 
   while( 1 )

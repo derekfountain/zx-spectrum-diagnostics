@@ -9,4 +9,8 @@
 #define GPIO_INPUT1   21
 #define GPIO_INPUT2   20
 
+#define GPIO_Z80_RESET 22
+
+#define GPIO_Z80_INT   15
+
 #endif
