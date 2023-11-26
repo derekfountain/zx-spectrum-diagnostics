@@ -17,6 +17,10 @@ add_executable(pico1
 	page_ula.c
 )
 
-target_link_libraries(pico1 pico_stdlib hardware_i2c hardware_adc)
+target_link_libraries(pico1
+		      pico_multicore
+		      pico_stdlib
+		      hardware_i2c
+		      hardware_adc)
 
 pico_add_extra_outputs(pico1)

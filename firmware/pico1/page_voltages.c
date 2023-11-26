@@ -8,9 +8,10 @@
 #include "page.h"
 
 #include <stdio.h>
+#include <string.h>
 #include "hardware/adc.h"
 
-static void voltage_page_entry( void )
+void voltage_page_entry( void )
 {
   adc_init();
   adc_gpio_init(26);
@@ -18,7 +19,7 @@ static void voltage_page_entry( void )
   adc_gpio_init(28);
 }
 
-static void voltage_page_exit( void )
+void voltage_page_exit( void )
 {
 }
 
@@ -61,43 +62,37 @@ static void voltage_page_exit( void )
  * I tried a board with a valid -5V supply and the OLED report said -4.47ish, which
  * is exactly what I'd expect. So I think it's OK.
  */
-static void voltage_page_test( void )
+const float conversion_factor = 3.3f / (1 << 12);          // 0.00081
+
+const float _5v_ratio     = 1.0 - (R103 / (R103 + R104));  // 0.50000 on my test board
+const float _12v_ratio    = 1.0 - (R105 / (R105 + R106));  // 0.20935 on my test board
+const float _minus5_ratio = 1.0 - (R101 / (R101 + R102));  // 0.49997 on my test board
+
+void voltage_page_test_5v( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
-  const float conversion_factor = 3.3f / (1 << 12);          // 0.00081
-
-  const float _5v_ratio     = 1.0 - (R103 / (R103 + R104));  // 0.50000 on my test board
-  const float _12v_ratio    = 1.0 - (R105 / (R105 + R106));  // 0.20935 on my test board
-  const float _minus5_ratio = 1.0 - (R101 / (R101 + R102));  // 0.49997 on my test board
-
   uint8_t _5v_line[32];
-  uint8_t _minus_5v_line[32];
-  uint8_t _12v_line[32];
 
   adc_select_input( 2 );
   sprintf( _5v_line,       " +5V: %0.3fV", (adc_read() * conversion_factor) / _5v_ratio );
-  draw_str(0,  0, _5v_line);
+  strncpy( result_txt, _5v_line, result_txt_max_len );
+}
+
+
+void voltage_page_test_12v( uint8_t *result_txt, uint32_t result_txt_max_len )
+{
+  uint8_t _12v_line[32];
 
   adc_select_input( 1 );
   sprintf( _12v_line,      "+12V: %0.3fV", (adc_read() * conversion_factor) / _12v_ratio );
-  draw_str(0,  8, _12v_line);
-
-  adc_select_input( 0 );
-  sprintf( _minus_5v_line, " -5V: %0.3fV", ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00 );
-  draw_str(0, 16, _minus_5v_line);
-
-  update_screen();
+  strncpy( result_txt, _12v_line, result_txt_max_len );
 }
 
-static page_t voltage_page = 
-{
-  voltage_page_entry,
-  voltage_page_exit,
-  voltage_page_test,
-  NULL,
-  1000,
-};
 
-page_t *get_voltage_page( void )
+void voltage_page_test_minus5v( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
-  return &voltage_page;
+  uint8_t _minus5v_line[32];
+
+  adc_select_input( 0 );
+  sprintf( _minus5v_line, " -5V: %0.3fV", ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00 );
+  strncpy( result_txt, _minus5v_line, result_txt_max_len );
 }

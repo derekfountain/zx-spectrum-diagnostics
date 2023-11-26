@@ -19,6 +19,7 @@ int init_oled( const uint8_t *f )
   gpio_pull_up( GPIO_OLED_SCK );
     
   SH1106_Init();
+  SH1106_Clear();
 
   if( f )
     font = f;

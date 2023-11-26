@@ -3,6 +3,10 @@
 
 #include "page.h"
 
-page_t *get_ula_page( void );
+void ula_page_gpios( uint gpio, uint32_t events );
+
+void ula_page_entry( void );
+void ula_page_test_int( uint8_t *result_txt, uint32_t result_txt_max_len );
+void ula_page_exit( void );
 
 #endif

@@ -1,6 +1,9 @@
+#include <string.h>
+
 #include "pico/platform.h"
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
+#include "pico/multicore.h"
 
 #include "page.h"
 #include "oled.h"
@@ -9,10 +12,13 @@
 #include "page_voltages.h"
 #include "page_ula.h"
 
-static page_t *current_page;
-
 static uint8_t input1_pressed;
 static uint8_t input2_pressed;
+
+#define NUM_TESTS        4
+#define WIDTH_OLED_CHARS 32
+static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
+
 
 /* From the timer_lowlevel.c example */
 static uint64_t get_time_us( void )
@@ -54,13 +60,44 @@ void gpios_callback( uint gpio, uint32_t events )
   }
   else
   {
-    if( current_page->gpios_fn != NULL )
-    {
-      (current_page->gpios_fn)( gpio, events );
-    }
+    ula_page_gpios( gpio, events );
   }
 }
 
+
+static void __time_critical_func(core1_main)( void )
+{
+  uint8_t result_line[WIDTH_OLED_CHARS];
+
+  while( 1 )
+  {
+    uint8_t test_num = 0;
+
+    voltage_page_entry();
+
+    voltage_page_test_5v( result_line, WIDTH_OLED_CHARS );
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+
+    voltage_page_test_12v( result_line, WIDTH_OLED_CHARS );
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+
+    voltage_page_test_minus5v( result_line, WIDTH_OLED_CHARS );
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+
+    voltage_page_exit();
+
+
+    ula_page_entry();
+
+    ula_page_test_int( result_line, WIDTH_OLED_CHARS );
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+
+    ula_page_exit();
+
+
+    sleep_ms( 100 );
+  }
+}
 
 void main( void )
 {
@@ -68,43 +105,39 @@ void main( void )
 
   sleep_ms( 1000 );
 
+  uint8_t line;
+  for( line=0; line<NUM_TESTS; line++ )
+    result_line_txt[line][0] = '\0';
+
   /* Initialise OLED screen with default font */
   init_oled( NULL );
 
+  /* Start with the Z80 held in reset */
   gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
   
+  /* Switch button GPIOs */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
   gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
 
   gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_FALL, true, &gpios_callback );
   gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_FALL, true );
 
-  current_page = get_ula_page();
-  (current_page->entry_fn)();
+  gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, true );
 
+  /* Init complete, run 2nd core code */
+  multicore_launch_core1( core1_main ); 
+
+  /* Main loop just loops over the result text lines displaying them */
   while( 1 )
   {
-    // This can't take too long. If it turns out that tests need to
-    // run a long time, this will have to be done on the second core
-    //
-    (current_page->tests_fn)();
-
-    for( uint32_t i=0; i < current_page->repeat_pause_ms; i++ )
-    {
-      if( input1_pressed )
-      {
-	input1_pressed = 0;
-	(current_page->exit_fn)();
-	// current_page = need to call function which returns the next page
-	(current_page->entry_fn)();
-	break;
-      }
-      else
-      {
-	sleep_ms( 1 );
-      }
+    uint8_t line;
+    for( line=0; line<NUM_TESTS; line++ )
+    {      
+      draw_str(0, line*8, result_line_txt[line] );      
     }
+    update_screen();    
 
+    sleep_ms( 100 );
   }
 
 }

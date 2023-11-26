@@ -17,13 +17,24 @@ are very slightly larger and they don't fit in the holes.
 I think the solution is to use zxedge:Spectrum_Edge_Connector, which is
 the correctly spaced footprint, which larger holes. I can't remember
 where I got this library from, so it's another punt.
+:: Fixed, but needs checking on the 1.1 board
 
 
 
 I forgot the label in the silkscreen. Need to add a v1.1 to the next one.
+:: Fixed
 
 
 
 Break the signals which would do damage to the Pico out to another
 connector header, so they aren't so easy to get wrong. +5V, -5V, +9V and
 +12V are the obvious ones. There might be others.
+
+
+
+Wire /INT up to GPIO15 on Pico1. I have the test for this and it
+correctly sees 50Hz.
+
+
+
+Wire /CLK up to GPIO14 on Pico1. Test needed.
