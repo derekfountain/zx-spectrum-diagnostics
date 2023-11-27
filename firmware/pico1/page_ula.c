@@ -18,7 +18,7 @@ static PIO pio;
 static uint sm_clk;
 static uint32_t clk_counter;
 
-#define TEST_TIME_SECS   2
+#define TEST_TIME_SECS   1
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 static uint32_t interrupt_counter = 0;
 static uint32_t clock_counter = 0;
@@ -27,7 +27,21 @@ alarm_id_t alarm_id = -1;
 
 static bool test_running = false;
 
-int64_t alarm_callback(alarm_id_t id, void *user_data)
+static void test_blipper( void )
+{
+  gpio_put( GPIO_BLIPPER, 1 );
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  gpio_put( GPIO_BLIPPER, 0 );
+}
+
+int64_t __time_critical_func(alarm_callback)(alarm_id_t id, void *user_data)
 {
   test_running = false;
   return 0;
@@ -48,12 +62,6 @@ void ula_page_entry( void )
   gpio_put( GPIO_Z80_RESET, 1 );
 
   gpio_init( GPIO_Z80_INT ); gpio_set_dir( GPIO_Z80_INT, GPIO_IN ); gpio_pull_up( GPIO_Z80_INT );
-
-  clk_counter = 0;
-
-  test_running = true;
-  pio_sm_set_enabled(pio, sm_clk, true);
-  alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
 }
 
 void ula_page_exit( void )
@@ -70,7 +78,7 @@ void ula_page_exit( void )
 //  pio_sm_unclaim( pio, sm_clk );
 
   /* Let the Z80 run again */
-  gpio_put( GPIO_Z80_RESET, 0 );  
+//  gpio_put( GPIO_Z80_RESET, 0 );  
 }
 
 void ula_page_gpios( uint gpio, uint32_t events )
@@ -85,8 +93,15 @@ void ula_page_gpios( uint gpio, uint32_t events )
 void ula_page_run_tests( void )
 {
   interrupt_counter = 0;
+  clk_counter = 0;
 
+  test_running = true;
+  pio_sm_set_enabled(pio, sm_clk, true);
+  alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
+
+  test_blipper();
   while( test_running );
+  test_blipper();
 
   pio_sm_put( pio, sm_clk, 0 );
   clk_counter = pio_sm_get( pio, sm_clk );

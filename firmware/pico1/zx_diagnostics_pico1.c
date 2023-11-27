@@ -117,6 +117,8 @@ void main( void )
   /* Initialise OLED screen with default font */
   init_oled( NULL );
 
+  gpio_init( GPIO_BLIPPER ); gpio_set_dir( GPIO_BLIPPER, GPIO_OUT ); gpio_put( GPIO_BLIPPER, 0 );
+
   /* Start with the Z80 running */
   gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 0 );
   
