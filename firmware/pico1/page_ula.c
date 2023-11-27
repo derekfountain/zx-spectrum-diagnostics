@@ -1,5 +1,5 @@
 /*
- * INTERRUPT line.
+ * INTERRUPT line and Z80 clock line tests.
  */
 
 #include "oled.h"
@@ -47,6 +47,10 @@ int64_t __time_critical_func(alarm_callback)(alarm_id_t id, void *user_data)
   return 0;
 }
 
+/*
+ * Initialise ULA tests. This is called once, when the Pico boots up.
+ * There's a PIO program for the clock test which is put in place here.
+ */
 void ula_page_init( void )
 {
   pio              = pio0;
@@ -61,13 +65,16 @@ void ula_page_entry( void )
   /* Assert and hold Z80 reset for this test page */
   gpio_put( GPIO_Z80_RESET, 1 );
 
+  /* Set up the Z80 interrupt GPIO */
   gpio_init( GPIO_Z80_INT ); gpio_set_dir( GPIO_Z80_INT, GPIO_IN ); gpio_pull_up( GPIO_Z80_INT );
 }
 
 void ula_page_exit( void )
 {
+  /* Turn off the PIO clock counter */
   pio_sm_set_enabled( pio, sm_clk, false );
 
+  /* This will already be off, no harm doing it again */
   if( alarm_id != -1 )
   {
     cancel_alarm( alarm_id );
@@ -75,14 +82,16 @@ void ula_page_exit( void )
     test_running = false;
   }
 
-//  pio_sm_unclaim( pio, sm_clk );
-
   /* Let the Z80 run again */
-//  gpio_put( GPIO_Z80_RESET, 0 );  
+  gpio_put( GPIO_Z80_RESET, 0 );  
 }
 
 void ula_page_gpios( uint gpio, uint32_t events )
 {
+  /*
+   * This is the GPIO callback for this test. It's called when the
+   * 50Hz interrupt line fires. Just count them.
+   */
   if( gpio == GPIO_Z80_INT )
   {
     if( test_running )

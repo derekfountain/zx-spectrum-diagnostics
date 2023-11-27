@@ -1,22 +1,32 @@
+; Small PIO program to count the cycles on the Z80's clock pin.
+; This would typically yield 3,500,000 per second.
+;
+; It works but setting the X register to 0xFFFFFFFF and then counting
+; it down for each toggle of the CLK signal. (There's no way to count
+; upwards in PIO, and it can't start at 0 because the x-- works on
+; pre-decrement logic.) So this runs and when it's told to stop the
+; value in X, which is pushed back to the core, is -(num clocks).
+; The C code works the true value out from there.
+;
 ; IN pin 0 should be mapped to the CLK pin
 
 .program clk_counter
 .wrap_target
-	mov x, ! null
+	mov x, ! null                         ; X = 0xFFFFFFFF
 count_loop:
-	wait 0 pin 0
-	wait 1 pin 0
+	wait 0 pin 0	                      ; wait for a toggle of
+	wait 1 pin 0                          ; the clock signal
 
 	pull noblock                          ; fetch whatever the 'C' has put in the FIFO, if anything
-   	out y, 32                             ; load what came from the 'C' into Y
+   	out y, 32                             ; load that into Y
 
-	jmp !y, stop_counter                  ; zero means the flag is inbound from the 'C'
+	jmp !y, stop_counter                  ; zero means the "stop" flag is inbound from the 'C'
 
-	jmp x--, count_loop
+	jmp x--, count_loop                   ; otherwise decrement X and go back for the next clock
 
 stop_counter:
-	mov isr, x
-	push noblock
+	mov isr, x                            ; if we've been told to stop, push the value of X
+	push noblock                          ; back to the core
 .wrap
 
 
@@ -25,13 +35,13 @@ stop_counter:
 % c-sdk {
 
 /*
- * input_pin should be CLK
+ * Set up the Z80 clock counter.
+ * input_pin should be the CLK GPIO.
  */
 void clk_counter_program_init(PIO pio, uint sm, uint offset, uint input_pin)
 {
-  pio_gpio_init(pio, input_pin);
-
   /* Set input pin to be input */
+  pio_gpio_init(pio, input_pin);
   pio_sm_set_consecutive_pindirs(pio, sm, input_pin,  1, false);
 
   /* Configure IN */

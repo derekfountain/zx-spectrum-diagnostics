@@ -64,7 +64,7 @@ void gpios_callback( uint gpio, uint32_t events )
 }
 
 
-static void __time_critical_func(core1_main)( void )
+static void core1_main( void )
 {
   uint8_t result_line[WIDTH_OLED_CHARS];
 
@@ -117,6 +117,7 @@ void main( void )
   /* Initialise OLED screen with default font */
   init_oled( NULL );
 
+  /* Blipper, for the scope */
   gpio_init( GPIO_BLIPPER ); gpio_set_dir( GPIO_BLIPPER, GPIO_OUT ); gpio_put( GPIO_BLIPPER, 0 );
 
   /* Start with the Z80 running */
@@ -140,6 +141,7 @@ void main( void )
     uint8_t line;
     for( line=0; line<NUM_TESTS; line++ )
     {      
+      draw_str(0, line*8, "                         " );      
       draw_str(0, line*8, result_line_txt[line] );      
     }
     update_screen();    
