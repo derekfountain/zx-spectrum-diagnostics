@@ -12,5 +12,6 @@
 #define GPIO_Z80_RESET 22
 
 #define GPIO_Z80_INT   15
+#define GPIO_Z80_CLK   14
 
 #endif

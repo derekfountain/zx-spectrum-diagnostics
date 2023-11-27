@@ -1,0 +1,44 @@
+; IN pin 0 should be mapped to the CLK pin
+
+.program clk_counter
+.wrap_target
+	mov x, ! null
+count_loop:
+	wait 0 pin 0
+	wait 1 pin 0
+
+	pull noblock                          ; fetch whatever the 'C' has put in the FIFO, if anything
+   	out y, 32                             ; load what came from the 'C' into Y
+
+	jmp !y, stop_counter                  ; zero means the flag is inbound from the 'C'
+
+	jmp x--, count_loop
+
+stop_counter:
+	mov isr, x
+	push noblock
+.wrap
+
+
+
+
+% c-sdk {
+
+/*
+ * input_pin should be CLK
+ */
+void clk_counter_program_init(PIO pio, uint sm, uint offset, uint input_pin)
+{
+  pio_gpio_init(pio, input_pin);
+
+  /* Set input pin to be input */
+  pio_sm_set_consecutive_pindirs(pio, sm, input_pin,  1, false);
+
+  /* Configure IN */
+  pio_sm_config c = clk_counter_program_get_default_config(offset);
+  sm_config_set_in_pins(&c, input_pin);
+
+  /* Initialise the state machine */
+  pio_sm_init(pio, sm, offset, &c);
+}
+%}

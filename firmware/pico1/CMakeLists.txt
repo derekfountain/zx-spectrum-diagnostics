@@ -17,8 +17,11 @@ add_executable(pico1
 	page_ula.c
 )
 
+pico_generate_pio_header(pico1 ${CMAKE_CURRENT_LIST_DIR}/clk_counter.pio)
+
 target_link_libraries(pico1
 		      pico_multicore
+		      hardware_pio
 		      pico_stdlib
 		      hardware_i2c
 		      hardware_adc)

@@ -15,10 +15,9 @@
 static uint8_t input1_pressed;
 static uint8_t input2_pressed;
 
-#define NUM_TESTS        4
+#define NUM_TESTS        5
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
-
 
 /* From the timer_lowlevel.c example */
 static uint64_t get_time_us( void )
@@ -88,8 +87,12 @@ static void __time_critical_func(core1_main)( void )
 
 
     ula_page_entry();
-
+    ula_page_run_tests();
+    
     ula_page_test_int( result_line, WIDTH_OLED_CHARS );
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+
+    ula_page_test_clk( result_line, WIDTH_OLED_CHARS );
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
 
     ula_page_exit();
@@ -109,11 +112,13 @@ void main( void )
   for( line=0; line<NUM_TESTS; line++ )
     result_line_txt[line][0] = '\0';
 
+  ula_page_init();
+
   /* Initialise OLED screen with default font */
   init_oled( NULL );
 
-  /* Start with the Z80 held in reset */
-  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
+  /* Start with the Z80 running */
+  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 0 );
   
   /* Switch button GPIOs */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
