@@ -15,7 +15,9 @@
 static uint8_t input1_pressed;
 static uint8_t input2_pressed;
 
-#define NUM_TESTS        5
+auto_init_mutex( oled_mutex );
+
+#define NUM_TESTS        6
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
 
@@ -75,13 +77,19 @@ static void core1_main( void )
     voltage_page_entry();
 
     voltage_page_test_5v( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
 
     voltage_page_test_12v( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-
+    mutex_exit( &oled_mutex );      
+      
     voltage_page_test_minus5v( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
 
     voltage_page_exit();
 
@@ -90,10 +98,19 @@ static void core1_main( void )
     ula_page_run_tests();
     
     ula_page_test_int( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
 
     ula_page_test_clk( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
+
+    ula_page_test_c_clk( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
 
     ula_page_exit();
 
@@ -120,8 +137,8 @@ void main( void )
   /* Blipper, for the scope */
   gpio_init( GPIO_BLIPPER ); gpio_set_dir( GPIO_BLIPPER, GPIO_OUT ); gpio_put( GPIO_BLIPPER, 0 );
 
-  /* Start with the Z80 running */
-  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 0 );
+  /* Start with the Z80 not running */
+  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
   
   /* Switch button GPIOs */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
@@ -141,8 +158,10 @@ void main( void )
     uint8_t line;
     for( line=0; line<NUM_TESTS; line++ )
     {      
-      draw_str(0, line*8, "                         " );      
+      draw_str(0, line*8, "                         " );
+      mutex_enter_blocking( &oled_mutex );      
       draw_str(0, line*8, result_line_txt[line] );      
+      mutex_exit( &oled_mutex );      
     }
     update_screen();    
 
