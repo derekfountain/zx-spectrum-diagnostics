@@ -70,6 +70,8 @@ static void core1_main( void )
 {
   uint8_t result_line[WIDTH_OLED_CHARS];
 
+  ula_page_init();
+
   while( 1 )
   {
     uint8_t test_num = 0;
@@ -128,8 +130,6 @@ void main( void )
   uint8_t line;
   for( line=0; line<NUM_TESTS; line++ )
     result_line_txt[line][0] = '\0';
-
-  ula_page_init();
 
   /* Initialise OLED screen with default font */
   init_oled( NULL );
