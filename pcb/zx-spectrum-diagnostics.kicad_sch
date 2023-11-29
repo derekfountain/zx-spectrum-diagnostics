@@ -2666,7 +2666,7 @@
   )
 
   (symbol (lib_id "Connector:Conn_01x03_Male") (at 157.48 189.738 180) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (in_bom yes) (on_board no) (fields_autoplaced)
     (uuid 522d7b36-6761-43f2-b965-1fc397ec4dcf)
     (property "Reference" "J103" (id 0) (at 159.258 188.4679 0)
       (effects (font (size 1.27 1.27)) (justify right))
@@ -3103,7 +3103,7 @@
   )
 
   (symbol (lib_id "Connector:Conn_01x03_Male") (at 156.972 179.324 180) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (in_bom yes) (on_board no) (fields_autoplaced)
     (uuid ec60f080-501d-4f51-8b39-161d95009c15)
     (property "Reference" "J102" (id 0) (at 158.75 178.0539 0)
       (effects (font (size 1.27 1.27)) (justify right))
