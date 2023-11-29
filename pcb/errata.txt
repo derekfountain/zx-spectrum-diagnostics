@@ -34,7 +34,24 @@ connector header, so they aren't so easy to get wrong. +5V, -5V, +9V and
 
 Wire /INT up to GPIO15 on Pico1. I have the test for this and it
 correctly sees 50Hz.
+:: Done
 
 
 
-Wire /CLK up to GPIO14 on Pico1. Test needed.
+Wire /CLK up to GPIO14 on Pico1. Tests for contended and noncontended
+frquencies are in place.
+:: Done
+
+
+
+Wire up ZXHALT to GPIO13 on Pico1. Will reveal if Z80 is stuck in a
+HALT lock (Z80 has execute HALT with interrupts disabled).
+
+
+
+Wire up ZXNMI to GPIO12 on Pico1. Will reveal if Z80 is stuck with
+incoming NMIs.
+
+
+
+Wire up ZXM1 to GPIO11 on Pico1. Will reveal if Z80 is one with broken M1.
