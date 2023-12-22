@@ -3,7 +3,7 @@
 
 /* These need to match the hardware design */
 
-#define GPIO_BLIPPER   0
+#define GPIO_P1_BLIPPER   9
 
 #define GPIO_OLED_SDA 16
 #define GPIO_OLED_SCK 17

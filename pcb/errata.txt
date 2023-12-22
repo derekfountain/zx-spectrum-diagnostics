@@ -60,3 +60,8 @@ incoming NMIs.
 
 Wire up ZXM1 to GPIO11 on Pico1. Will reveal if Z80 is one with broken M1.
 :: Done
+
+
+
+v1.1 Second board, has the correct edge connector footprint
+===========================================================

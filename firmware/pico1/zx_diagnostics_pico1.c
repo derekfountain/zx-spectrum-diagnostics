@@ -135,11 +135,12 @@ void main( void )
   init_oled( NULL );
 
   /* Blipper, for the scope */
-  gpio_init( GPIO_BLIPPER ); gpio_set_dir( GPIO_BLIPPER, GPIO_OUT ); gpio_put( GPIO_BLIPPER, 0 );
+  gpio_init( GPIO_P1_BLIPPER ); gpio_set_dir( GPIO_P1_BLIPPER, GPIO_OUT ); gpio_put( GPIO_P1_BLIPPER, 0 );
 
   /* Start with the Z80 not running */
   gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
-  
+
+  */
   /* Switch button GPIOs */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
   gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );

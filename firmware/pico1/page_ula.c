@@ -31,7 +31,7 @@ static bool test_running = false;
 
 static void test_blipper( void )
 {
-  gpio_put( GPIO_BLIPPER, 1 );
+  gpio_put( GPIO_P1_BLIPPER, 1 );
   __asm volatile ("nop");
   __asm volatile ("nop");
   __asm volatile ("nop");
@@ -40,7 +40,7 @@ static void test_blipper( void )
   __asm volatile ("nop");
   __asm volatile ("nop");
   __asm volatile ("nop");
-  gpio_put( GPIO_BLIPPER, 0 );
+  gpio_put( GPIO_P1_BLIPPER, 0 );
 }
 
 int64_t __time_critical_func(alarm_callback)(alarm_id_t id, void *user_data)
