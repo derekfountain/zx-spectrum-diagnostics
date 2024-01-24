@@ -14,9 +14,6 @@
 #include "hardware/clocks.h"
 #include "clk_counter.pio.h"
 
-static PIO      pio;
-static uint     sm_clk;
-static uint     sm_c_clk;
 static uint32_t clk_counter;
 static uint32_t c_clk_counter;
 
@@ -51,21 +48,10 @@ int64_t __time_critical_func(alarm_callback)(alarm_id_t id, void *user_data)
 
 /*
  * Initialise ULA tests. This is called once, when the Pico boots up.
- * There's a PIO program for the clock test which is put in place here.
  */
 void ula_page_init( void )
 {
-  pio              = pio0;
-
-  /* First state machine runs the clock counter for uncontended (i.e. Z80 held in reset) */
-  sm_clk           = pio_claim_unused_sm( pio, true );
-  clk_counter_program_init( pio, sm_clk, pio_add_program( pio, &clk_counter_program ), GPIO_Z80_CLK );
-  pio_sm_set_enabled( pio, sm_clk, true );
-
-  /* Second state machine runs the clock counter for contended (i.e. Z80 free running) */
-  sm_c_clk         = pio_claim_unused_sm( pio, true );
-  clk_counter_program_init( pio, sm_c_clk, pio_add_program( pio, &clk_counter_program ), GPIO_Z80_CLK );
-  pio_sm_set_enabled( pio, sm_c_clk, true );
+  /* NOP as yet */
 }
 
 void ula_page_entry( void )
@@ -76,14 +62,6 @@ void ula_page_entry( void )
 
 void ula_page_exit( void )
 {
-  /* This will all already be off, no harm doing it again */
-  test_running = false;
-
-  if( alarm_id != -1 )
-  {
-    cancel_alarm( alarm_id );
-    alarm_id = -1;
-  }
 }
 
 void ula_page_gpios( uint gpio, uint32_t events )
@@ -106,10 +84,22 @@ void ula_page_run_tests( void )
   /* Assert and hold Z80 reset for first clock test */
   gpio_put( GPIO_Z80_RESET, 1 );
 
+  const PIO pio = pio0;
+
+  /* Load clock counting PIO program into PIO's instruction memory */
+  uint32_t offset  = pio_add_program( pio, &clk_counter_program );
+
+  /* Set up state machine to run the clock counter for uncontended (i.e. Z80 held in reset) */
+  uint32_t sm_clk  = pio_claim_unused_sm( pio, true );
+  clk_counter_program_init( pio, sm_clk, offset, GPIO_Z80_CLK );
+  pio_sm_exec( pio, sm_clk, pio_encode_jmp(offset) );
+  pio_sm_set_enabled( pio, sm_clk, true );
+
   /*
    * Alarm is used to run the test for a defined period. The callback sets the
    * test running flag to false which breaks the loop
    */
+// I need to start this on the edge of the INT signal to ensure no rounding errors
   test_running = true;
   alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
 
@@ -118,12 +108,19 @@ void ula_page_run_tests( void )
   while( test_running );
 
   /*
+   * The alarm went off and test_running is now false. Interrupts aren't beiogn counted.
+   *
    * Bump the PIO again to stop the test and have it deliver the value. The value comes
    * back in 1's complement
    */
   pio_sm_put( pio, sm_clk, 0 );
   clk_counter = pio_sm_get( pio, sm_clk );
   clk_counter = ~clk_counter;
+
+  pio_sm_set_enabled(pio, sm_clk, false);
+  pio_sm_clear_fifos(pio, sm_clk);
+  pio_sm_unclaim(pio, sm_clk);
+
 
   /*
    * Now do it again, this time with the Z80 running, which makes the ULA
@@ -136,15 +133,27 @@ void ula_page_run_tests( void )
    */
   gpio_put( GPIO_Z80_RESET, 0 ); sleep_ms( 650 );
 
+  /* State machine runs the clock counter for contended (i.e. Z80 free running) */
+  sm_clk  = pio_claim_unused_sm( pio, true );
+  clk_counter_program_init( pio, sm_clk, offset, GPIO_Z80_CLK );
+  pio_sm_set_enabled( pio, sm_clk, true );
+
   test_running = true;
   alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
 
-  pio_sm_put( pio, sm_c_clk, 1 );
+  pio_sm_put( pio, sm_clk, 1 );
   while( test_running );
 
-  pio_sm_put( pio, sm_c_clk, 0 );
-  c_clk_counter = pio_sm_get( pio, sm_c_clk );
+  pio_sm_put( pio, sm_clk, 0 );
+  c_clk_counter = pio_sm_get( pio, sm_clk );
   c_clk_counter = ~c_clk_counter;
+
+  pio_sm_set_enabled(pio, sm_clk, false);
+  pio_sm_clear_fifos(pio, sm_clk);
+  pio_sm_unclaim(pio, sm_clk);
+
+  /* Remove program to let something else use the PIO */
+  pio_remove_program(pio, &clk_counter_program, offset );
 
   cancel_alarm( alarm_id );
   alarm_id = -1;

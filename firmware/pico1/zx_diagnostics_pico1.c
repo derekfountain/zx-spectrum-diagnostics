@@ -76,47 +76,75 @@ static void core1_main( void )
   {
     uint8_t test_num = 0;
 
+    /***
+     *     __   __     _  _                        
+     *     \ \ / /___ | || |_  __ _  __ _  ___  ___
+     *      \ V // _ \| ||  _|/ _` |/ _` |/ -_)(_-<
+     *       \_/ \___/|_| \__|\__,_|\__, |\___|/__/
+     *                              |___/          
+     */
+
+    /* Initialise the voltage tests */
     voltage_page_entry();
 
+    /* Run the 5V rail test and populate the result line for the display */
     voltage_page_test_5v( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
 
+    /* Run the 12V rail test and populate the result line for the display */
     voltage_page_test_12v( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
       
+    /* Run the -5V rail test and populate the result line for the display */
     voltage_page_test_minus5v( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
 
+    /* Tear down voltage tests */
     voltage_page_exit();
 
+    /***
+     *      _   _  _       _   
+     *     | | | || |     /_\  
+     *     | |_| || |__  / _ \ 
+     *      \___/ |____|/_/ \_\
+     *                         
+     */
 
+    /* Initialise the ULA tests */
     ula_page_entry();
+
+    /* The ULA tests are all run in one function */
     ula_page_run_tests();
     
+    /* Pick up the interrupt test result and populate the result line for the display */
     ula_page_test_int( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
 
+    /* Pick up the clock test result and populate the result line for the display */
     ula_page_test_clk( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
 
+    /* Pick up the contended clock test result and populate the result line for the display */
     ula_page_test_c_clk( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
 
+    /* Tear down ULA tests */
     ula_page_exit();
 
 
+    /* End of tests, pause a while then do them again */
     sleep_ms( 100 );
   }
 }
@@ -140,7 +168,6 @@ void main( void )
   /* Start with the Z80 not running */
   gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
 
-  */
   /* Switch button GPIOs */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
   gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
