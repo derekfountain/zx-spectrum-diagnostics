@@ -84,22 +84,39 @@ void ula_page_run_tests( void )
   /* Assert and hold Z80 reset for first clock test */
   gpio_put( GPIO_Z80_RESET, 1 );
 
+  /* Hardcoded pio0 for this test, at least for now */
   const PIO pio = pio0;
 
-  /* Load clock counting PIO program into PIO's instruction memory */
-  uint32_t offset  = pio_add_program( pio, &clk_counter_program );
+  /* Load clock counting PIO program into PIO's instruction memory and grab a state machine */
+  uint32_t offset      = pio_add_program( pio, &clk_counter_program );
+  uint32_t sm_clk      = pio_claim_unused_sm( pio, true );
+  pio_sm_config config = clk_counter_program_get_default_config(offset);
 
   /* Set up state machine to run the clock counter for uncontended (i.e. Z80 held in reset) */
-  uint32_t sm_clk  = pio_claim_unused_sm( pio, true );
+  pio_sm_init( pio, sm_clk, offset, &config );
   clk_counter_program_init( pio, sm_clk, offset, GPIO_Z80_CLK );
-  pio_sm_exec( pio, sm_clk, pio_encode_jmp(offset) );
   pio_sm_set_enabled( pio, sm_clk, true );
 
   /*
    * Alarm is used to run the test for a defined period. The callback sets the
-   * test running flag to false which breaks the loop
+   * test running flag to false which breaks the loop.
+   *
+   * I need to start this on the edge of the INT signal to ensure no rounding errors,
+   * so enable the GPIO callback code with a bogus test_running=true, then spin waiting
+   * for the counter to get bumped, indicating that the GPIO triggered the callback.
+   * At that point I know the INT has just happened, so I reset the counter and start
+   * the test. The int_checker is in case the INT signal is faultly, in which case
+   * after around 20ms has passed I assume it's not coming and I break out to start the
+   * test anyway.
    */
-// I need to start this on the edge of the INT signal to ensure no rounding errors
+  uint32_t int_checker = 0;
+  interrupt_counter = 0;
+  test_running = true;
+  while( interrupt_counter == 0 && int_checker++ < 25 )
+    sleep_ms( 1 );
+  test_running = false;
+
+  interrupt_counter = 0;
   test_running = true;
   alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
 
@@ -108,7 +125,7 @@ void ula_page_run_tests( void )
   while( test_running );
 
   /*
-   * The alarm went off and test_running is now false. Interrupts aren't beiogn counted.
+   * The alarm went off and test_running is now false. Interrupts aren't being counted.
    *
    * Bump the PIO again to stop the test and have it deliver the value. The value comes
    * back in 1's complement
@@ -117,9 +134,8 @@ void ula_page_run_tests( void )
   clk_counter = pio_sm_get( pio, sm_clk );
   clk_counter = ~clk_counter;
 
+  /* Done this bit, stop the state machine */
   pio_sm_set_enabled(pio, sm_clk, false);
-  pio_sm_clear_fifos(pio, sm_clk);
-  pio_sm_unclaim(pio, sm_clk);
 
 
   /*
@@ -127,40 +143,48 @@ void ula_page_run_tests( void )
    * use its contention handling
    */
 
+
   /*
    * Let the Z80 run. The sleep is to let the capacitor C27 in the
    * Spectrum charge up and release the RESET line
    */
   gpio_put( GPIO_Z80_RESET, 0 ); sleep_ms( 650 );
 
-  /* State machine runs the clock counter for contended (i.e. Z80 free running) */
-  sm_clk  = pio_claim_unused_sm( pio, true );
+  /* Reinitialise the state machine for the clock counter for contended (i.e. Z80 free running) */
+  pio_sm_init( pio, sm_clk, offset, &config );
   clk_counter_program_init( pio, sm_clk, offset, GPIO_Z80_CLK );
   pio_sm_set_enabled( pio, sm_clk, true );
 
+  /* Restart the alarm which defines the duration of the test */
   test_running = true;
   alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
 
+  /* Kick the state machine to make it start counting from 0 again */
   pio_sm_put( pio, sm_clk, 1 );
   while( test_running );
 
+  /* Fetch contended clock counter */
   pio_sm_put( pio, sm_clk, 0 );
   c_clk_counter = pio_sm_get( pio, sm_clk );
   c_clk_counter = ~c_clk_counter;
 
+  /* Stop the state machine and release it */
   pio_sm_set_enabled(pio, sm_clk, false);
-  pio_sm_clear_fifos(pio, sm_clk);
   pio_sm_unclaim(pio, sm_clk);
 
   /* Remove program to let something else use the PIO */
   pio_remove_program(pio, &clk_counter_program, offset );
 
+  /*
+   * Alarm is done with, this reset isn't necessary but if I change the
+   * timing system something else might need to go here
+   */
   cancel_alarm( alarm_id );
   alarm_id = -1;
 
-  /* Stop the Z80 again */
+  /* Stop the Z80 again, we exit these tests with the Z80 held in reset */
   gpio_put( GPIO_Z80_RESET, 1 );
-  sleep_ms( 100 );
+  sleep_ms( 10 );
 }
 
 
