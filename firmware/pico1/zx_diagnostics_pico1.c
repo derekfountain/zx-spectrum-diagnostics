@@ -72,10 +72,6 @@ void gpios_callback( uint gpio, uint32_t events )
     }
     else
     {
-      /* Wait for the switch to come back up, then let it settle */
-      while( gpio_get( gpio ) );
-      busy_wait_us_32( DEBOUNCE_USECS );
-
       /* Debounced, take action - just set a flag */
       if( gpio == GPIO_INPUT1 )
       {
@@ -203,7 +199,7 @@ void main( void )
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
   gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
 
-  gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_FALL, true, &gpios_callback );
+  gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_RISE, true, &gpios_callback );
   gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_FALL, true );
 
   gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, true );
