@@ -12,10 +12,37 @@
 #include "page_voltages.h"
 #include "page_ula.h"
 
-static uint8_t input1_pressed;
-static uint8_t input2_pressed;
+static uint8_t input1_pressed = 0;
+static uint8_t input2_pressed = 0;
 
 auto_init_mutex( oled_mutex );
+
+typedef enum
+{
+  VOLTAGE_PAGE = 0,
+  ULA_PAGE,
+  Z80_PAGE,
+
+  LAST_PAGE = ULA_PAGE
+}
+PAGE;
+
+PAGE current_page;
+
+typedef struct
+{
+  PAGE page;
+  uint32_t first_displayed_test;
+  uint32_t last_displayed_test;
+}
+DISPLAY_PAGE;
+
+DISPLAY_PAGE page[] =
+{
+  { VOLTAGE_PAGE, 0, 2 },
+  { ULA_PAGE,     3, 5 },
+};
+
 
 #define NUM_TESTS        6
 #define WIDTH_OLED_CHARS 32
@@ -51,9 +78,13 @@ void gpios_callback( uint gpio, uint32_t events )
 
       /* Debounced, take action - just set a flag */
       if( gpio == GPIO_INPUT1 )
-	input1_pressed;
+      {
+	input1_pressed = 1;
+      }
       else if( gpio == GPIO_INPUT2 )
-	input2_pressed;
+      {
+	input2_pressed = 1;
+      }
 
       /* Note this point as when we last actioned a switch */
       debounce_timestamp_us = get_time_us();
@@ -180,16 +211,28 @@ void main( void )
   /* Init complete, run 2nd core code */
   multicore_launch_core1( core1_main ); 
 
+  current_page = VOLTAGE_PAGE;
+
   /* Main loop just loops over the result text lines displaying them */
   while( 1 )
   {
-    uint8_t line;
-    for( line=0; line<NUM_TESTS; line++ )
+    if( input1_pressed )
+    {
+      if( current_page++ == LAST_PAGE )
+	current_page = VOLTAGE_PAGE;
+
+      input1_pressed = 0;
+    }
+
+    uint8_t line=0;
+    for( uint32_t test_index=page[current_page].first_displayed_test; test_index<=page[current_page].last_displayed_test; test_index++ )
     {      
       draw_str(0, line*8, "                         " );
       mutex_enter_blocking( &oled_mutex );      
-      draw_str(0, line*8, result_line_txt[line] );      
+      draw_str(0, line*8, result_line_txt[test_index] );      
       mutex_exit( &oled_mutex );      
+
+      line++;
     }
     update_screen();    
 
