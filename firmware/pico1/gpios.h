@@ -15,5 +15,6 @@
 
 #define GPIO_Z80_INT   15
 #define GPIO_Z80_CLK   14
+#define GPIO_Z80_M1    13
 
 #endif

@@ -11,6 +11,7 @@
 
 #include "page_voltages.h"
 #include "page_ula.h"
+#include "page_z80.h"
 
 static uint8_t input1_pressed = 0;
 static uint8_t input2_pressed = 0;
@@ -23,7 +24,7 @@ typedef enum
   ULA_PAGE,
   Z80_PAGE,
 
-  LAST_PAGE = ULA_PAGE
+  LAST_PAGE = Z80_PAGE
 }
 PAGE;
 
@@ -41,10 +42,11 @@ DISPLAY_PAGE page[] =
 {
   { VOLTAGE_PAGE, 0, 2 },
   { ULA_PAGE,     3, 5 },
+  { Z80_PAGE,     6, 6 },
 };
 
 
-#define NUM_TESTS        6
+#define NUM_TESTS        7
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
 
@@ -89,6 +91,7 @@ void gpios_callback( uint gpio, uint32_t events )
   else
   {
     ula_page_gpios( gpio, events );
+    z80_page_gpios( gpio, events );
   }
 }
 
@@ -170,6 +173,27 @@ static void core1_main( void )
     /* Tear down ULA tests */
     ula_page_exit();
 
+    /***
+     *      ____ ___   __  
+     *     |_  /( _ ) /  \ 
+     *      / / / _ \| () |
+     *     /___|\___/ \__/ 
+     *                     
+     */
+
+    /* Initialise the Z80 tests */
+    z80_page_entry();
+
+    z80_page_run_tests();
+
+    /* Run the 5V rail test and populate the result line for the display */
+    z80_page_test_m1( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
+
+    /* Tear down Z80 tests */
+    z80_page_exit();
 
     /* End of tests, pause a while then do them again */
     sleep_ms( 100 );
@@ -203,6 +227,7 @@ void main( void )
   gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_FALL, true );
 
   gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, true );
 
   /* Init complete, run 2nd core code */
   multicore_launch_core1( core1_main ); 
@@ -218,6 +243,8 @@ void main( void )
 	current_page = VOLTAGE_PAGE;
 
       input1_pressed = 0;
+
+      clear_screen();
     }
 
     uint8_t line=0;

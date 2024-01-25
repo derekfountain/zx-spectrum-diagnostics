@@ -1,5 +1,5 @@
 /*
- * INTERRUPT line and Z80 clock line tests.
+ * INTERRUPT line and ULA->Z80 clock line tests.
  */
 
 #include "oled.h"
@@ -22,7 +22,7 @@ static uint32_t c_clk_counter;
 static uint32_t interrupt_counter = 0;
 static uint32_t clock_counter     = 0;
 
-alarm_id_t alarm_id = -1;
+alarm_id_t ula_alarm_id = -1;
 
 static bool test_running = false;
 
@@ -40,7 +40,7 @@ static void test_blipper( void )
   gpio_put( GPIO_P1_BLIPPER, 0 );
 }
 
-int64_t __time_critical_func(alarm_callback)(alarm_id_t id, void *user_data)
+int64_t __time_critical_func(ula_alarm_callback)(alarm_id_t id, void *user_data)
 {
   test_running = false;
   return 0;
@@ -51,13 +51,13 @@ int64_t __time_critical_func(alarm_callback)(alarm_id_t id, void *user_data)
  */
 void ula_page_init( void )
 {
-  /* NOP as yet */
+  /* Set up the Z80 interrupt GPIO */
+  gpio_init( GPIO_Z80_INT ); gpio_set_dir( GPIO_Z80_INT, GPIO_IN ); gpio_pull_up( GPIO_Z80_INT );
 }
 
 void ula_page_entry( void )
 {
-  /* Set up the Z80 interrupt GPIO */
-  gpio_init( GPIO_Z80_INT ); gpio_set_dir( GPIO_Z80_INT, GPIO_IN ); gpio_pull_up( GPIO_Z80_INT );
+  /* NOP as yet */
 }
 
 void ula_page_exit( void )
@@ -118,7 +118,7 @@ void ula_page_run_tests( void )
 
   interrupt_counter = 0;
   test_running = true;
-  alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
+  ula_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, ula_alarm_callback, NULL, false );
 
   /* Bump the PIO to start the program, then wait for the timer alarm */
   pio_sm_put( pio, sm_clk, 1 );
@@ -161,7 +161,7 @@ void ula_page_run_tests( void )
 
   /* Restart the alarm which defines the duration of the test */
   test_running = true;
-  alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, alarm_callback, NULL, false );
+  ula_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, ula_alarm_callback, NULL, false );
 
   /* Kick the state machine to make it start counting from 0 again */
   pio_sm_put( pio, sm_clk, 1 );
@@ -184,8 +184,8 @@ void ula_page_run_tests( void )
    * Alarm is done with, this reset isn't necessary but if I change the
    * timing system something else might need to go here
    */
-  cancel_alarm( alarm_id );
-  alarm_id = -1;
+  cancel_alarm( ula_alarm_id );
+  ula_alarm_id = -1;
 
   /* Stop the Z80 again, we exit these tests with the Z80 held in reset */
   gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 650 );
@@ -212,7 +212,6 @@ void ula_page_test_clk( uint8_t *result_txt, uint32_t result_txt_max_len )
   uint8_t clock_line[32];
 
   sprintf( clock_line, " CLK: %0.2fMHz", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
-//  sprintf( clock_line, "%0.2fMHz %u", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0, clk_counter );
   strncpy( result_txt, clock_line, result_txt_max_len );
 }
 
