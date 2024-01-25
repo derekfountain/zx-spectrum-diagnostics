@@ -128,9 +128,13 @@ void ula_page_run_tests( void )
    * The alarm went off and test_running is now false. Interrupts aren't being counted.
    *
    * Bump the PIO again to stop the test and have it deliver the value. The value comes
-   * back in 1's complement
+   * back in 1's complement. A tiny pause is required between poking the statemachine
+   * to tell it to prepare the answer, and actually reading the answer. It's only a 
+   * couple of PIO instructions, but just occasionally it would get confused if I read
+   * the value too quickly.
    */
   pio_sm_put( pio, sm_clk, 0 );
+  busy_wait_us_32(100);
   clk_counter = pio_sm_get( pio, sm_clk );
   clk_counter = ~clk_counter;
 
@@ -144,16 +148,16 @@ void ula_page_run_tests( void )
    */
 
 
+  /* Reinitialise the state machine for the clock counter for contended (i.e. Z80 free running) */
+  pio_sm_init( pio, sm_clk, offset, &config );
+  clk_counter_program_init( pio, sm_clk, offset, GPIO_Z80_CLK );
+  pio_sm_set_enabled( pio, sm_clk, true );
+
   /*
    * Let the Z80 run. The sleep is to let the capacitor C27 in the
    * Spectrum charge up and release the RESET line
    */
   gpio_put( GPIO_Z80_RESET, 0 ); sleep_ms( 650 );
-
-  /* Reinitialise the state machine for the clock counter for contended (i.e. Z80 free running) */
-  pio_sm_init( pio, sm_clk, offset, &config );
-  clk_counter_program_init( pio, sm_clk, offset, GPIO_Z80_CLK );
-  pio_sm_set_enabled( pio, sm_clk, true );
 
   /* Restart the alarm which defines the duration of the test */
   test_running = true;
@@ -165,6 +169,7 @@ void ula_page_run_tests( void )
 
   /* Fetch contended clock counter */
   pio_sm_put( pio, sm_clk, 0 );
+  busy_wait_us_32(100);
   c_clk_counter = pio_sm_get( pio, sm_clk );
   c_clk_counter = ~c_clk_counter;
 
@@ -183,7 +188,8 @@ void ula_page_run_tests( void )
   alarm_id = -1;
 
   /* Stop the Z80 again, we exit these tests with the Z80 held in reset */
-  gpio_put( GPIO_Z80_RESET, 1 );
+  gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 650 );
+
   sleep_ms( 10 );
 }
 
@@ -206,6 +212,7 @@ void ula_page_test_clk( uint8_t *result_txt, uint32_t result_txt_max_len )
   uint8_t clock_line[32];
 
   sprintf( clock_line, " CLK: %0.2fMHz", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
+//  sprintf( clock_line, "%0.2fMHz %u", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0, clk_counter );
   strncpy( result_txt, clock_line, result_txt_max_len );
 }
 

@@ -59,7 +59,7 @@ static uint64_t debounce_timestamp_us = 0;
 void gpios_callback( uint gpio, uint32_t events ) 
 {
   /*
-   * Switch event, set to interrupt on falling edge, so this is a click down.
+   * Switch event, set to interrupt on rising edge, so this is a click up.
    */
   if( (gpio == GPIO_INPUT1) || (gpio == GPIO_INPUT2) )
   {
