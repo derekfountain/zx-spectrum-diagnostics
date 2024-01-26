@@ -44,11 +44,11 @@ DISPLAY_PAGE page[] =
 {
   { VOLTAGE_PAGE, NULL,          NULL,           0, 2 },
   { ULA_PAGE,     ula_page_init, ula_page_gpios, 3, 5 },
-  { Z80_PAGE,     z80_page_init, z80_page_gpios, 6, 6 },
+  { Z80_PAGE,     z80_page_init, z80_page_gpios, 6, 8 },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
-#define NUM_TESTS        7
+#define NUM_TESTS        9
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
 
@@ -204,10 +204,20 @@ static void core1_main( void )
     /* Initialise the Z80 tests */
     z80_page_entry();
 
+    /* Run the Z80 tests and populate the result lines for the display */
     z80_page_run_tests();
 
-    /* Run the 5V rail test and populate the result line for the display */
     z80_page_test_m1( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
+
+    z80_page_test_rd( result_line, WIDTH_OLED_CHARS );
+    mutex_enter_blocking( &oled_mutex );      
+    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
+    mutex_exit( &oled_mutex );      
+
+    z80_page_test_wr( result_line, WIDTH_OLED_CHARS );
     mutex_enter_blocking( &oled_mutex );      
     strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
     mutex_exit( &oled_mutex );      
@@ -248,6 +258,8 @@ void main( void )
 
   gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, true );
   gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, true );
 
   /* Init complete, run 2nd core code */
   multicore_launch_core1( core1_main ); 
