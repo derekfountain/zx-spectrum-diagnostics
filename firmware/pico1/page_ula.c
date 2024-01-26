@@ -64,7 +64,7 @@ void ula_page_exit( void )
 {
 }
 
-void ula_page_gpios( uint gpio, uint32_t events )
+void ula_page_gpios( uint32_t gpio, uint32_t events )
 {
   /*
    * This is the GPIO callback for this test. It's called when the

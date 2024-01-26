@@ -32,7 +32,9 @@ PAGE current_page;
 
 typedef struct
 {
-  PAGE page;
+  PAGE     page;
+  void     (*init_func)(void);
+  void     (*gpio_func)( uint32_t, uint32_t );
   uint32_t first_displayed_test;
   uint32_t last_displayed_test;
 }
@@ -40,11 +42,11 @@ DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, 0, 2 },
-  { ULA_PAGE,     3, 5 },
-  { Z80_PAGE,     6, 6 },
+  { VOLTAGE_PAGE, NULL,          NULL,           0, 2 },
+  { ULA_PAGE,     ula_page_init, ula_page_gpios, 3, 5 },
+  { Z80_PAGE,     z80_page_init, z80_page_gpios, 6, 6 },
 };
-
+#define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
 #define NUM_TESTS        7
 #define WIDTH_OLED_CHARS 32
@@ -90,8 +92,19 @@ void gpios_callback( uint gpio, uint32_t events )
   }
   else
   {
-    ula_page_gpios( gpio, events );
-    z80_page_gpios( gpio, events );
+    /*
+     * A GPIO (which isn't the user interface switches) has changed.
+     * Pass the details into the code which is running the tests.
+     * I don't know which tests are running and which aren't, so
+     * just tell them all about the GPIO changing.
+     */
+    for( uint32_t page_index = 0; page_index < NUM_PAGES; page_index++ )
+    {
+      if( page[page_index].gpio_func != NULL )
+      {
+	(page[page_index].gpio_func)( gpio, events );
+      }
+    }
   }
 }
 
@@ -100,7 +113,14 @@ static void core1_main( void )
 {
   uint8_t result_line[WIDTH_OLED_CHARS];
 
-  ula_page_init();
+  /* Run all the pages' initialisation functions */
+  for( uint32_t page_index = 0; page_index < NUM_PAGES; page_index++ )
+  {
+    if( page[page_index].init_func != NULL )
+    {
+      (page[page_index].init_func)();
+    }
+  }
 
   while( 1 )
   {

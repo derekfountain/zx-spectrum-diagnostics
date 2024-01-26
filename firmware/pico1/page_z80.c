@@ -54,7 +54,7 @@ void z80_page_exit( void )
 {
 }
 
-void z80_page_gpios( uint gpio, uint32_t events )
+void z80_page_gpios( uint32_t gpio, uint32_t events )
 {
   if( gpio == GPIO_Z80_M1 )
   {
