@@ -14,10 +14,19 @@
 #define TEST_TIME_SECS   3
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
-static uint32_t m1_counter   = 0;
-static uint32_t rd_counter   = 0;
-static uint32_t wr_counter   = 0;
-static uint32_t mreq_counter = 0;
+typedef enum
+{
+  SEEN_NEITHER = 0x00,
+  SEEN_RISING  = 0x01,
+  SEEN_FALLING = 0x02,
+  SEEN_BOTH    = 0x03,
+}
+SEEN_EDGE;
+
+static SEEN_EDGE m1_flag   = SEEN_NEITHER;
+static SEEN_EDGE rd_flag   = SEEN_NEITHER;
+static SEEN_EDGE wr_flag   = SEEN_NEITHER;
+static SEEN_EDGE mreq_flag = SEEN_NEITHER;
 
 alarm_id_t z80_alarm_id = -1;
 
@@ -54,18 +63,23 @@ void z80_page_init( void )
 
 void z80_page_entry( void )
 {
-  gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL, true );
+  m1_flag   = SEEN_NEITHER;
+  rd_flag   = SEEN_NEITHER;
+  wr_flag   = SEEN_NEITHER;
+  mreq_flag = SEEN_NEITHER;
+
+  gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
+  gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
+  gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
+  gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
 }
 
 void z80_page_exit( void )
 {
-  gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL, false );
-  gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL, false );
-  gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL, false );
-  gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+  gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+  gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+  gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
 }
 
 void z80_page_gpios( uint32_t gpio, uint32_t events )
@@ -75,21 +89,77 @@ void z80_page_gpios( uint32_t gpio, uint32_t events )
     switch( gpio )
     {
     case GPIO_Z80_M1:
-      gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL, false );
-      m1_counter++;
-      break;
+    {
+      if( events | GPIO_IRQ_EDGE_FALL )
+      {
+	m1_flag |= SEEN_FALLING;
+      }
+      if( events | GPIO_IRQ_EDGE_RISE )
+      {
+	m1_flag |= SEEN_RISING;
+      }
+
+      if( m1_flag == SEEN_BOTH )
+      {
+	gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+      }
+    }
+    break;
+
     case GPIO_Z80_RD:
-      gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL, false );
-      rd_counter++;
-      break;
+    {
+      if( events | GPIO_IRQ_EDGE_FALL )
+      {
+	rd_flag |= SEEN_FALLING;
+      }
+      if( events | GPIO_IRQ_EDGE_RISE )
+      {
+	rd_flag |= SEEN_RISING;
+      }
+
+      if( rd_flag == SEEN_BOTH )
+      {
+	gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+      }
+    }
+    break;
+
     case GPIO_Z80_WR:
-      gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL, false );
-      wr_counter++;
-      break;
+    {
+      if( events | GPIO_IRQ_EDGE_FALL )
+      {
+	wr_flag |= SEEN_FALLING;
+      }
+      if( events | GPIO_IRQ_EDGE_RISE )
+      {
+	wr_flag |= SEEN_RISING;
+      }
+
+      if( wr_flag == SEEN_BOTH )
+      {
+	gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+      }
+    }
+    break;
+
     case GPIO_Z80_MREQ:
-      gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL, false );
-      mreq_counter++;
-      break;
+    {
+      if( events | GPIO_IRQ_EDGE_FALL )
+      {
+	mreq_flag |= SEEN_FALLING;
+      }
+      if( events | GPIO_IRQ_EDGE_RISE )
+      {
+	mreq_flag |= SEEN_RISING;
+      }
+
+      if( mreq_flag == SEEN_BOTH )
+      {
+	gpio_set_irq_enabled( GPIO_Z80_MREQ,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+      }
+    }
+    break;
+
     default:
       break;
     }
@@ -98,11 +168,6 @@ void z80_page_gpios( uint32_t gpio, uint32_t events )
 
 void z80_page_run_tests( void )
 {
-  m1_counter   = 0;
-  rd_counter   = 0;
-  wr_counter   = 0;
-  mreq_counter = 0;
-
   /*
    * Restart the Z80. This test runs as the computer boots up and runs the
    * ROM code. The sleep is to let the capacitor C27 in the Spectrum charge
@@ -130,7 +195,7 @@ void z80_page_test_m1( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "  M1: %s", m1_counter > 0 ? "     OK" : "Missing" );
+  sprintf( result_line, "  M1: %s", m1_flag == SEEN_BOTH ? "     OK" : "Missing" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
 
@@ -138,7 +203,7 @@ void z80_page_test_rd( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "  RD: %s", rd_counter > 0 ? "Running" : "Inactive" );
+  sprintf( result_line, "  RD: %s", rd_flag == SEEN_BOTH ? "Running" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
 
@@ -146,7 +211,7 @@ void z80_page_test_wr( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "  WR: %s", rd_counter > 0 ? "Running" : "Inactive" );
+  sprintf( result_line, "  WR: %s", wr_flag == SEEN_BOTH ? "Running" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
 
@@ -154,6 +219,6 @@ void z80_page_test_mreq( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "MREQ: %s", rd_counter > 0 ? "Running" : "Inactive" );
+  sprintf( result_line, "MREQ: %s", mreq_flag == SEEN_BOTH ? "Running" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
