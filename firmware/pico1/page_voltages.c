@@ -11,12 +11,16 @@
 #include <string.h>
 #include "hardware/adc.h"
 
-void voltage_page_entry( void )
+void voltage_page_init( void )
 {
   adc_init();
   adc_gpio_init(26);
   adc_gpio_init(27);
   adc_gpio_init(28);
+}
+
+void voltage_page_entry( void )
+{
 }
 
 void voltage_page_exit( void )

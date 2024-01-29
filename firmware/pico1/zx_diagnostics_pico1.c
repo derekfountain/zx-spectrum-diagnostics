@@ -30,25 +30,44 @@ PAGE;
 
 PAGE current_page;
 
+typedef enum
+{
+  TEST_VOLTAGE_5V     = 0,
+  TEST_VOLTAGE_12V,
+  TEST_VOLTAGE_MIN5V,
+
+  TEST_ULA_INT,
+  TEST_ULA_CLK,
+  TEST_ULA_CCLK,
+
+  TEST_Z80_M1,
+  TEST_Z80_RD,
+  TEST_Z80_WR,
+
+  NUM_TESTS,
+}
+TEST_INDEX;
+
 typedef struct
 {
-  PAGE     page;
-  void     (*init_func)(void);
-  void     (*gpio_func)( uint32_t, uint32_t );
-  uint32_t first_displayed_test;
-  uint32_t last_displayed_test;
+  PAGE       page;
+  void      (*init_func)(void);
+  void      (*gpio_func)( uint32_t, uint32_t );
+  TEST_INDEX first_displayed_test;
+  TEST_INDEX last_displayed_test;
 }
 DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, NULL,          NULL,           0, 2 },
-  { ULA_PAGE,     ula_page_init, ula_page_gpios, 3, 5 },
-  { Z80_PAGE,     z80_page_init, z80_page_gpios, 6, 8 },
+  { VOLTAGE_PAGE, voltage_page_init, NULL,               TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
+  { ULA_PAGE,     ula_page_init,     ula_page_gpios,     TEST_ULA_INT,    TEST_ULA_CCLK      },
+  { Z80_PAGE,     z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_WR        },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
-#define NUM_TESTS        9
+
+
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
 
@@ -98,12 +117,9 @@ void gpios_callback( uint gpio, uint32_t events )
      * I don't know which tests are running and which aren't, so
      * just tell them all about the GPIO changing.
      */
-    for( uint32_t page_index = 0; page_index < NUM_PAGES; page_index++ )
+    if( page[current_page].gpio_func != NULL )
     {
-      if( page[page_index].gpio_func != NULL )
-      {
-	(page[page_index].gpio_func)( gpio, events );
-      }
+      (page[current_page].gpio_func)( gpio, events );
     }
   }
 }
@@ -112,6 +128,19 @@ void gpios_callback( uint gpio, uint32_t events )
 static void core1_main( void )
 {
   uint8_t result_line[WIDTH_OLED_CHARS];
+
+  /*
+   * This core handles the user button inputs, and therefore has to handle the
+   * test GPIO inputs as well (because only one GPIO IRQ handler is allowed)
+   *
+   * Switch button GPIOs
+   */
+  gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
+  gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
+
+  /* Put GPIOs callback in place so the user buttons work */
+  gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_RISE, true, &gpios_callback );
+  gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_RISE, true );
 
   /* Run all the pages' initialisation functions */
   for( uint32_t page_index = 0; page_index < NUM_PAGES; page_index++ )
@@ -124,109 +153,122 @@ static void core1_main( void )
 
   while( 1 )
   {
-    uint8_t test_num = 0;
-
-    /***
-     *     __   __     _  _                        
-     *     \ \ / /___ | || |_  __ _  __ _  ___  ___
-     *      \ V // _ \| ||  _|/ _` |/ _` |/ -_)(_-<
-     *       \_/ \___/|_| \__|\__,_|\__, |\___|/__/
-     *                              |___/          
-     */
-
-    /* Initialise the voltage tests */
-    voltage_page_entry();
-
-    /* Run the 5V rail test and populate the result line for the display */
-    voltage_page_test_5v( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
-
-    /* Run the 12V rail test and populate the result line for the display */
-    voltage_page_test_12v( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+    switch( current_page )
+    {
+    case VOLTAGE_PAGE:
+    {
+      /***
+       *     __   __     _  _                        
+       *     \ \ / /___ | || |_  __ _  __ _  ___  ___
+       *      \ V // _ \| ||  _|/ _` |/ _` |/ -_)(_-<
+       *       \_/ \___/|_| \__|\__,_|\__, |\___|/__/
+       *                              |___/          
+       */
       
-    /* Run the -5V rail test and populate the result line for the display */
-    voltage_page_test_minus5v( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      /* Initialise the voltage tests */
+      voltage_page_entry();
 
-    /* Tear down voltage tests */
-    voltage_page_exit();
+      /* Run the 5V rail test and populate the result line for the display */
+      voltage_page_test_5v( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_VOLTAGE_5V], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+      
+      /* Run the 12V rail test and populate the result line for the display */
+      voltage_page_test_12v( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_VOLTAGE_12V], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+      
+      /* Run the -5V rail test and populate the result line for the display */
+      voltage_page_test_minus5v( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_VOLTAGE_MIN5V], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+      
+      /* Tear down voltage tests */
+      voltage_page_exit();
+    }
+    break;
 
-    /***
-     *      _   _  _       _   
-     *     | | | || |     /_\  
-     *     | |_| || |__  / _ \ 
-     *      \___/ |____|/_/ \_\
-     *                         
-     */
+    case ULA_PAGE:
+    {
+      /***
+       *      _   _  _       _   
+       *     | | | || |     /_\  
+       *     | |_| || |__  / _ \ 
+       *      \___/ |____|/_/ \_\
+       *                         
+       */
+      
+      /* Initialise the ULA tests */
+      ula_page_entry();
 
-    /* Initialise the ULA tests */
-    ula_page_entry();
-
-    /* The ULA tests are all run in one function */
-    ula_page_run_tests();
+      /* The ULA tests are all run in one function */
+      ula_page_run_tests();
     
-    /* Pick up the interrupt test result and populate the result line for the display */
-    ula_page_test_int( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      /* Pick up the interrupt test result and populate the result line for the display */
+      ula_page_test_int( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_ULA_INT], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
 
-    /* Pick up the clock test result and populate the result line for the display */
-    ula_page_test_clk( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      /* Pick up the clock test result and populate the result line for the display */
+      ula_page_test_clk( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_ULA_CLK], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
 
-    /* Pick up the contended clock test result and populate the result line for the display */
-    ula_page_test_c_clk( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      /* Pick up the contended clock test result and populate the result line for the display */
+      ula_page_test_c_clk( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_ULA_CCLK], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+      
+      /* Tear down ULA tests */
+      ula_page_exit();
+    }
+    break;
 
-    /* Tear down ULA tests */
-    ula_page_exit();
+    case Z80_PAGE:
+    {
+      /***
+       *      ____ ___   __  
+       *     |_  /( _ ) /  \ 
+       *      / / / _ \| () |
+       *     /___|\___/ \__/ 
+       *                     
+       */
 
-    /***
-     *      ____ ___   __  
-     *     |_  /( _ ) /  \ 
-     *      / / / _ \| () |
-     *     /___|\___/ \__/ 
-     *                     
-     */
+      /* Initialise the Z80 tests */
+      z80_page_entry();
 
-    /* Initialise the Z80 tests */
-    z80_page_entry();
+      /* Run the Z80 tests and populate the result lines for the display */
+      z80_page_run_tests();
 
-    /* Run the Z80 tests and populate the result lines for the display */
-    z80_page_run_tests();
+      z80_page_test_m1( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_Z80_M1], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
 
-    z80_page_test_m1( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      z80_page_test_rd( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_Z80_RD], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
 
-    z80_page_test_rd( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      z80_page_test_wr( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_Z80_WR], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
 
-    z80_page_test_wr( result_line, WIDTH_OLED_CHARS );
-    mutex_enter_blocking( &oled_mutex );      
-    strncpy( result_line_txt[test_num++], result_line, WIDTH_OLED_CHARS );
-    mutex_exit( &oled_mutex );      
+      /* Tear down Z80 tests */
+      z80_page_exit();
+    }
+    break;
 
-    /* Tear down Z80 tests */
-    z80_page_exit();
-
-    /* End of tests, pause a while then do them again */
-    sleep_ms( 100 );
+    default:
+    break;
+    }
   }
 }
 
@@ -246,24 +288,13 @@ void main( void )
   /* Blipper, for the scope */
   gpio_init( GPIO_P1_BLIPPER ); gpio_set_dir( GPIO_P1_BLIPPER, GPIO_OUT ); gpio_put( GPIO_P1_BLIPPER, 0 );
 
-  /* Start with the Z80 not running */
-  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 1 );
-
-  /* Switch button GPIOs */
-  gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
-  gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
-
-  gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_RISE, true, &gpios_callback );
-  gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_FALL, true );
-
-  gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, true );
+  /* Start with the Z80 running */
+  gpio_init( GPIO_Z80_RESET ); gpio_set_dir( GPIO_Z80_RESET, GPIO_OUT ); gpio_put( GPIO_Z80_RESET, 0 );
 
   /* Init complete, run 2nd core code */
   multicore_launch_core1( core1_main ); 
 
+  /* Start with voltages page */
   current_page = VOLTAGE_PAGE;
 
   /* Main loop just loops over the result text lines displaying them */

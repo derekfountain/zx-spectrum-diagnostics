@@ -57,11 +57,12 @@ void ula_page_init( void )
 
 void ula_page_entry( void )
 {
-  /* NOP as yet */
+  gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, true );
 }
 
 void ula_page_exit( void )
 {
+//  gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, false );
 }
 
 void ula_page_gpios( uint32_t gpio, uint32_t events )
@@ -73,14 +74,15 @@ void ula_page_gpios( uint32_t gpio, uint32_t events )
   if( gpio == GPIO_Z80_INT )
   {
     if( test_running )
+    {
       interrupt_counter++;
+      test_blipper();
+    }
   }
 }
 
 void ula_page_run_tests( void )
 {
-  interrupt_counter = 0;
-
   /* Assert and hold Z80 reset for first clock test */
   gpio_put( GPIO_Z80_RESET, 1 );
 
@@ -187,10 +189,7 @@ void ula_page_run_tests( void )
   cancel_alarm( ula_alarm_id );
   ula_alarm_id = -1;
 
-  /* Stop the Z80 again, we exit these tests with the Z80 held in reset */
-  gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 650 );
-
-  sleep_ms( 10 );
+  /* We exit these tests with the Z80 running */
 }
 
 

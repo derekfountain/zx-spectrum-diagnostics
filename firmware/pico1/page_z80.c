@@ -11,7 +11,7 @@
 #include <string.h>
 
 /* Long enough to let the Spectrum boot and run a decent part of the ROM */
-#define TEST_TIME_SECS   5
+#define TEST_TIME_SECS   3
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
 static uint32_t m1_counter = 0;
@@ -52,11 +52,16 @@ void z80_page_init( void )
 
 void z80_page_entry( void )
 {
-  /* NOP as yet */
+  gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, true );
 }
 
 void z80_page_exit( void )
 {
+  gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, false );
 }
 
 void z80_page_gpios( uint32_t gpio, uint32_t events )
@@ -66,12 +71,15 @@ void z80_page_gpios( uint32_t gpio, uint32_t events )
     switch( gpio )
     {
     case GPIO_Z80_M1:
+      gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, false );
       m1_counter++;
       break;
     case GPIO_Z80_RD:
+      gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, false );
       rd_counter++;
       break;
     case GPIO_Z80_WR:
+      gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, false );
       wr_counter++;
       break;
     default:
