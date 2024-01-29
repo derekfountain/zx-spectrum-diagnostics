@@ -14,9 +14,10 @@
 #define TEST_TIME_SECS   3
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
-static uint32_t m1_counter = 0;
-static uint32_t rd_counter = 0;
-static uint32_t wr_counter = 0;
+static uint32_t m1_counter   = 0;
+static uint32_t rd_counter   = 0;
+static uint32_t wr_counter   = 0;
+static uint32_t mreq_counter = 0;
 
 alarm_id_t z80_alarm_id = -1;
 
@@ -45,23 +46,26 @@ int64_t __time_critical_func(z80_alarm_callback)(alarm_id_t id, void *user_data)
 void z80_page_init( void )
 {
   /* Set up the Z80 sampling GPIOs */
-  gpio_init( GPIO_Z80_M1 ); gpio_set_dir( GPIO_Z80_M1, GPIO_IN ); gpio_pull_up( GPIO_Z80_M1 );
-  gpio_init( GPIO_Z80_RD ); gpio_set_dir( GPIO_Z80_RD, GPIO_IN ); gpio_pull_up( GPIO_Z80_RD );
-  gpio_init( GPIO_Z80_WR ); gpio_set_dir( GPIO_Z80_WR, GPIO_IN ); gpio_pull_up( GPIO_Z80_WR );
+  gpio_init( GPIO_Z80_M1 );   gpio_set_dir( GPIO_Z80_M1,   GPIO_IN ); gpio_pull_up( GPIO_Z80_M1 );
+  gpio_init( GPIO_Z80_RD );   gpio_set_dir( GPIO_Z80_RD,   GPIO_IN ); gpio_pull_up( GPIO_Z80_RD );
+  gpio_init( GPIO_Z80_WR );   gpio_set_dir( GPIO_Z80_WR,   GPIO_IN ); gpio_pull_up( GPIO_Z80_WR );
+  gpio_init( GPIO_Z80_MREQ ); gpio_set_dir( GPIO_Z80_MREQ, GPIO_IN ); gpio_pull_up( GPIO_Z80_MREQ );
 }
 
 void z80_page_entry( void )
 {
-  gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, true );
-  gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL, true );
+  gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL, true );
 }
 
 void z80_page_exit( void )
 {
-  gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, false );
-  gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, false );
-  gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL, false );
 }
 
 void z80_page_gpios( uint32_t gpio, uint32_t events )
@@ -71,16 +75,20 @@ void z80_page_gpios( uint32_t gpio, uint32_t events )
     switch( gpio )
     {
     case GPIO_Z80_M1:
-      gpio_set_irq_enabled( GPIO_Z80_M1,  GPIO_IRQ_EDGE_FALL, false );
+      gpio_set_irq_enabled( GPIO_Z80_M1,   GPIO_IRQ_EDGE_FALL, false );
       m1_counter++;
       break;
     case GPIO_Z80_RD:
-      gpio_set_irq_enabled( GPIO_Z80_RD,  GPIO_IRQ_EDGE_FALL, false );
+      gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL, false );
       rd_counter++;
       break;
     case GPIO_Z80_WR:
-      gpio_set_irq_enabled( GPIO_Z80_WR,  GPIO_IRQ_EDGE_FALL, false );
+      gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL, false );
       wr_counter++;
+      break;
+    case GPIO_Z80_MREQ:
+      gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL, false );
+      mreq_counter++;
       break;
     default:
       break;
@@ -90,12 +98,17 @@ void z80_page_gpios( uint32_t gpio, uint32_t events )
 
 void z80_page_run_tests( void )
 {
-  m1_counter = 0;
+  m1_counter   = 0;
+  rd_counter   = 0;
+  wr_counter   = 0;
+  mreq_counter = 0;
 
   /*
-   * Let the Z80 run. The sleep is to let the capacitor C27 in the
-   * Spectrum charge up and release the RESET line
+   * Restart the Z80. This test runs as the computer boots up and runs the
+   * ROM code. The sleep is to let the capacitor C27 in the Spectrum charge
+   * up and release the RESET line
    */
+  gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 650 );
   gpio_put( GPIO_Z80_RESET, 0 ); sleep_ms( 650 );
 
   /* Restart the alarm which defines the duration of the test */
@@ -110,11 +123,6 @@ void z80_page_run_tests( void )
    */
   cancel_alarm( z80_alarm_id );
   z80_alarm_id = -1;
-
-  /* Stop the Z80 again, we exit these tests with the Z80 held in reset */
-  gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 650 );
-
-  sleep_ms( 10 );
 }
 
 
@@ -139,5 +147,13 @@ void z80_page_test_wr( uint8_t *result_txt, uint32_t result_txt_max_len )
   uint8_t result_line[32];
 
   sprintf( result_line, "  WR: %s", rd_counter > 0 ? "Running" : "Inactive" );
+  strncpy( result_txt, result_line, result_txt_max_len );
+}
+
+void z80_page_test_mreq( uint8_t *result_txt, uint32_t result_txt_max_len )
+{
+  uint8_t result_line[32];
+
+  sprintf( result_line, "MREQ: %s", rd_counter > 0 ? "Running" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }

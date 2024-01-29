@@ -1,3 +1,34 @@
+/*
+ * ZX Diagnostics Firmware, a Raspberry Pi Pico based Spectrum test device
+ * Copyright (C) 2024 Derek Fountain
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
+/*
+ * cmake -DCMAKE_BUILD_TYPE=Debug ..
+ * make -j10
+ * sudo openocd -f interface/picoprobe.cfg -f target/rp2040.cfg -c "program ./zx_diagnostics_pico1.elf verify reset exit"
+ * sudo openocd -f interface/picoprobe.cfg -f target/rp2040.cfg
+ * gdb-multiarch ./zx_diagnostics_pico1.elf
+ *  target remote localhost:3333
+ *  load
+ *  monitor reset init
+ *  continue
+ */
+
 #include <string.h>
 
 #include "pico/platform.h"
@@ -18,6 +49,7 @@ static uint8_t input2_pressed = 0;
 
 auto_init_mutex( oled_mutex );
 
+/* Set of pages, press button 1 to cycle these */
 typedef enum
 {
   VOLTAGE_PAGE = 0,
@@ -30,6 +62,7 @@ PAGE;
 
 PAGE current_page;
 
+/* All the tests the unit currently runs */
 typedef enum
 {
   TEST_VOLTAGE_5V     = 0,
@@ -43,11 +76,13 @@ typedef enum
   TEST_Z80_M1,
   TEST_Z80_RD,
   TEST_Z80_WR,
+  TEST_Z80_MREQ,
 
   NUM_TESTS,
 }
 TEST_INDEX;
 
+/* Paging, for the user interface */
 typedef struct
 {
   PAGE       page;
@@ -62,10 +97,9 @@ DISPLAY_PAGE page[] =
 {
   { VOLTAGE_PAGE, voltage_page_init, NULL,               TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
   { ULA_PAGE,     ula_page_init,     ula_page_gpios,     TEST_ULA_INT,    TEST_ULA_CCLK      },
-  { Z80_PAGE,     z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_WR        },
+  { Z80_PAGE,     z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_MREQ      },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
-
 
 
 #define WIDTH_OLED_CHARS 32
@@ -78,6 +112,11 @@ static uint64_t get_time_us( void )
   uint32_t hi = timer_hw->timehr;
   return ((uint64_t)hi << 32u) | lo;
 }
+
+/*
+ * GPIO event handler callback. This manages the user input buttons, plus
+ * any GPIO handling the tests require
+ */
 static uint64_t debounce_timestamp_us = 0;
 void gpios_callback( uint gpio, uint32_t events ) 
 {
@@ -114,8 +153,6 @@ void gpios_callback( uint gpio, uint32_t events )
     /*
      * A GPIO (which isn't the user interface switches) has changed.
      * Pass the details into the code which is running the tests.
-     * I don't know which tests are running and which aren't, so
-     * just tell them all about the GPIO changing.
      */
     if( page[current_page].gpio_func != NULL )
     {
@@ -125,15 +162,18 @@ void gpios_callback( uint gpio, uint32_t events )
 }
 
 
+/*
+ * Core 1 runs the tests
+ */
 static void core1_main( void )
 {
   uint8_t result_line[WIDTH_OLED_CHARS];
 
   /*
-   * This core handles the user button inputs, and therefore has to handle the
-   * test GPIO inputs as well (because only one GPIO IRQ handler is allowed)
+   * This core handles the test GPIO handling, and therefore has to handle the
+   * user interface buttons as well (because only one GPIO IRQ handler is allowed)
    *
-   * Switch button GPIOs
+   * Initialise the switch button GPIOs
    */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
   gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
@@ -261,6 +301,11 @@ static void core1_main( void )
       strncpy( result_line_txt[TEST_Z80_WR], result_line, WIDTH_OLED_CHARS );
       mutex_exit( &oled_mutex );      
 
+      z80_page_test_mreq( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_Z80_MREQ], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+
       /* Tear down Z80 tests */
       z80_page_exit();
     }
@@ -272,6 +317,10 @@ static void core1_main( void )
   }
 }
 
+
+/*
+ * Core 0 runs the user interface/screen
+ */
 void main( void )
 {
   bi_decl(bi_program_description("ZX Spectrum Diagnostics Pico1 Board Binary."));
