@@ -86,6 +86,7 @@ TEST_INDEX;
 typedef struct
 {
   PAGE       page;
+  uint8_t   *gui_title;
   void      (*init_func)(void);
   void      (*gpio_func)( uint32_t, uint32_t );
   TEST_INDEX first_displayed_test;
@@ -95,9 +96,9 @@ DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, voltage_page_init, NULL,               TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
-  { ULA_PAGE,     ula_page_init,     ula_page_gpios,     TEST_ULA_INT,    TEST_ULA_CCLK      },
-  { Z80_PAGE,     z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_MREQ      },
+  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
+  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     TEST_ULA_INT,    TEST_ULA_CCLK      },
+  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_MREQ      },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
@@ -359,7 +360,9 @@ void main( void )
       clear_screen();
     }
 
-    uint8_t line=0;
+    draw_str(0, 0, page[current_page].gui_title );
+
+    uint8_t line=2;
     for( uint32_t test_index=page[current_page].first_displayed_test; test_index<=page[current_page].last_displayed_test; test_index++ )
     {      
       draw_str(0, line*8, "                         " );
