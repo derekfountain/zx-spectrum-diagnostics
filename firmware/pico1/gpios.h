@@ -20,4 +20,13 @@
 #define GPIO_Z80_CLK   14
 #define GPIO_Z80_INT   15
 
+#define GPIO_DBUS_D0    0
+#define GPIO_DBUS_D1    1
+#define GPIO_DBUS_D2    2
+#define GPIO_DBUS_D3    3
+#define GPIO_DBUS_D4    4
+#define GPIO_DBUS_D5    5
+#define GPIO_DBUS_D6    6
+#define GPIO_DBUS_D7    7
+
 #endif

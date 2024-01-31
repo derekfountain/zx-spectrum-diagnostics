@@ -14,15 +14,6 @@
 #define TEST_TIME_SECS   3
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
-typedef enum
-{
-  SEEN_NEITHER = 0x00,
-  SEEN_RISING  = 0x01,
-  SEEN_FALLING = 0x02,
-  SEEN_BOTH    = 0x03,
-}
-SEEN_EDGE;
-
 static SEEN_EDGE m1_flag   = SEEN_NEITHER;
 static SEEN_EDGE rd_flag   = SEEN_NEITHER;
 static SEEN_EDGE wr_flag   = SEEN_NEITHER;

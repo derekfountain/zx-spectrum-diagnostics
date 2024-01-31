@@ -43,6 +43,7 @@
 #include "page_voltages.h"
 #include "page_ula.h"
 #include "page_z80.h"
+#include "page_dbus.h"
 
 static uint8_t input1_pressed = 0;
 static uint8_t input2_pressed = 0;
@@ -55,8 +56,9 @@ typedef enum
   VOLTAGE_PAGE = 0,
   ULA_PAGE,
   Z80_PAGE,
+  DBUS_PAGE,
 
-  LAST_PAGE = Z80_PAGE
+  LAST_PAGE = DBUS_PAGE
 }
 PAGE;
 
@@ -77,6 +79,8 @@ typedef enum
   TEST_Z80_RD,
   TEST_Z80_WR,
   TEST_Z80_MREQ,
+
+  TEST_DBUS_DBUS,
 
   NUM_TESTS,
 }
@@ -99,6 +103,7 @@ DISPLAY_PAGE page[] =
   { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
   { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     TEST_ULA_INT,    TEST_ULA_CCLK      },
   { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_MREQ      },
+  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
@@ -312,6 +317,33 @@ static void core1_main( void )
     }
     break;
 
+    case DBUS_PAGE:
+    {
+      /***
+       *      ___         _           ___           
+       *     |   \  __ _ | |_  __ _  | _ ) _  _  ___
+       *     | |) |/ _` ||  _|/ _` | | _ \| || |(_-<
+       *     |___/ \__,_| \__|\__,_| |___/ \_,_|/__/
+       *                                            
+       */
+
+      /* Initialise the data bus tests */
+      dbus_page_entry();
+
+      /* Run the data bus tests and populate the result lines for the display */
+      dbus_page_run_tests();
+
+      /* Only one test here so far */
+      dbus_page_test_result( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_DBUS_DBUS], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+
+      /* Tear down data bus tests */
+      dbus_page_exit();
+    }
+    break;
+
     default:
     break;
     }
@@ -345,7 +377,7 @@ void main( void )
   multicore_launch_core1( core1_main ); 
 
   /* Start with voltages page */
-  current_page = VOLTAGE_PAGE;
+  current_page = DBUS_PAGE; //VOLTAGE_PAGE;
 
   /* Main loop just loops over the result text lines displaying them */
   while( 1 )
