@@ -11,7 +11,7 @@
 #include <string.h>
 
 /* Long enough to let the Spectrum boot and run a decent part of the ROM */
-#define TEST_TIME_SECS   3
+#define TEST_TIME_SECS   2
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
 static SEEN_EDGE d0_flag   = SEEN_NEITHER;
@@ -25,7 +25,7 @@ static SEEN_EDGE d7_flag   = SEEN_NEITHER;
 
 static bool dbus_test_running = false;
 
-int64_t __time_critical_func(dbus_alarm_callback)(alarm_id_t id, void *user_data)
+static int64_t __time_critical_func(dbus_alarm_callback)(alarm_id_t id, void *user_data)
 {
   dbus_test_running = false;
   return 0;
@@ -86,6 +86,11 @@ void dbus_page_gpios( uint32_t gpio, uint32_t events )
   {
     if( (gpio >= GPIO_DBUS_D0) && (gpio <= GPIO_DBUS_D7) )
     {
+      /*
+       * One of the data bus GPIOs has changed state. Note whether it was
+       * rising or falling. If it's been seen doing both, it behaviour is
+       * confirmed as correct and the GPIO callback is switched off.
+       */
       SEEN_EDGE *d_flag_ptr=NULL;
 
       switch( gpio )
@@ -151,7 +156,6 @@ void dbus_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( dbus_alarm_id );
-  dbus_alarm_id = -1;
 }
 
 
@@ -159,15 +163,14 @@ void dbus_page_test_result( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  d3_flag = SEEN_NEITHER;
-  sprintf( result_line, "Bus: %c %c %c %c %c %c %c %c",
-                        d0_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d1_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d2_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d3_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d4_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d5_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d6_flag == SEEN_BOTH ? 'Y' : ' ',
-                        d7_flag == SEEN_BOTH ? 'Y' : ' ' );
+  sprintf( result_line, "Present: %c%c%c%c%c%c%c%c",
+	                d7_flag == SEEN_BOTH ? '7' : 'x',
+                        d6_flag == SEEN_BOTH ? '6' : 'x',
+                        d5_flag == SEEN_BOTH ? '5' : 'x',
+                        d4_flag == SEEN_BOTH ? '4' : 'x',
+                        d3_flag == SEEN_BOTH ? '3' : 'x',
+                        d2_flag == SEEN_BOTH ? '2' : 'x',
+                        d1_flag == SEEN_BOTH ? '1' : 'x',
+	                d0_flag == SEEN_BOTH ? '0' : 'x');
   strncpy( result_txt, result_line, result_txt_max_len );
 }

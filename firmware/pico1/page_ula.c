@@ -22,8 +22,6 @@ static uint32_t c_clk_counter;
 static uint32_t interrupt_counter = 0;
 static uint32_t clock_counter     = 0;
 
-alarm_id_t ula_alarm_id = -1;
-
 static bool test_running = false;
 
 static void test_blipper( void )
@@ -40,7 +38,7 @@ static void test_blipper( void )
   gpio_put( GPIO_P1_BLIPPER, 0 );
 }
 
-int64_t __time_critical_func(ula_alarm_callback)(alarm_id_t id, void *user_data)
+static int64_t __time_critical_func(ula_alarm_callback)(alarm_id_t id, void *user_data)
 {
   test_running = false;
   return 0;
@@ -120,7 +118,7 @@ void ula_page_run_tests( void )
 
   interrupt_counter = 0;
   test_running = true;
-  ula_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, ula_alarm_callback, NULL, false );
+  alarm_id_t ula_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, ula_alarm_callback, NULL, false );
 
   /* Bump the PIO to start the program, then wait for the timer alarm */
   pio_sm_put( pio, sm_clk, 1 );
@@ -187,7 +185,6 @@ void ula_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( ula_alarm_id );
-  ula_alarm_id = -1;
 
   /* We exit these tests with the Z80 running */
 }

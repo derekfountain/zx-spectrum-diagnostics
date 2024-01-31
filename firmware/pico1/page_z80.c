@@ -19,8 +19,6 @@ static SEEN_EDGE rd_flag   = SEEN_NEITHER;
 static SEEN_EDGE wr_flag   = SEEN_NEITHER;
 static SEEN_EDGE mreq_flag = SEEN_NEITHER;
 
-alarm_id_t z80_alarm_id = -1;
-
 static bool z80_test_running = false;
 
 static void test_blipper( void )
@@ -37,7 +35,7 @@ static void test_blipper( void )
   gpio_put( GPIO_P1_BLIPPER, 0 );
 }
 
-int64_t __time_critical_func(z80_alarm_callback)(alarm_id_t id, void *user_data)
+static int64_t __time_critical_func(z80_alarm_callback)(alarm_id_t id, void *user_data)
 {
   z80_test_running = false;
   return 0;
@@ -169,7 +167,7 @@ void z80_page_run_tests( void )
 
   /* Restart the alarm which defines the duration of the test */
   z80_test_running = true;
-  z80_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, z80_alarm_callback, NULL, false );
+  alarm_id_t z80_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, z80_alarm_callback, NULL, false );
 
   while( z80_test_running );
 
@@ -178,7 +176,6 @@ void z80_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( z80_alarm_id );
-  z80_alarm_id = -1;
 }
 
 
@@ -186,7 +183,7 @@ void z80_page_test_m1( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "  M1: %s", m1_flag == SEEN_BOTH ? "     OK" : "Missing" );
+  sprintf( result_line, "  M1: %s", m1_flag == SEEN_BOTH ? "OK" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
 
@@ -194,7 +191,7 @@ void z80_page_test_rd( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "  RD: %s", rd_flag == SEEN_BOTH ? "Running" : "Inactive" );
+  sprintf( result_line, "  RD: %s", rd_flag == SEEN_BOTH ? "OK" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
 
@@ -202,7 +199,7 @@ void z80_page_test_wr( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "  WR: %s", wr_flag == SEEN_BOTH ? "Running" : "Inactive" );
+  sprintf( result_line, "  WR: %s", wr_flag == SEEN_BOTH ? "OK" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }
 
@@ -210,6 +207,6 @@ void z80_page_test_mreq( uint8_t *result_txt, uint32_t result_txt_max_len )
 {
   uint8_t result_line[32];
 
-  sprintf( result_line, "MREQ: %s", mreq_flag == SEEN_BOTH ? "Running" : "Inactive" );
+  sprintf( result_line, "MREQ: %s", mreq_flag == SEEN_BOTH ? "OK" : "Inactive" );
   strncpy( result_txt, result_line, result_txt_max_len );
 }

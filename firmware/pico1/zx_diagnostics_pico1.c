@@ -86,24 +86,32 @@ typedef enum
 }
 TEST_INDEX;
 
+typedef enum
+{
+  NEVER_RUN,
+  RUN,
+}
+RUN_ONCE_FLAG;
+
 /* Paging, for the user interface */
 typedef struct
 {
-  PAGE       page;
-  uint8_t   *gui_title;
-  void      (*init_func)(void);
-  void      (*gpio_func)( uint32_t, uint32_t );
-  TEST_INDEX first_displayed_test;
-  TEST_INDEX last_displayed_test;
+  PAGE          page;
+  uint8_t      *gui_title;
+  void         (*init_func)(void);
+  void         (*gpio_func)( uint32_t, uint32_t );
+  RUN_ONCE_FLAG run_once;
+  TEST_INDEX    first_displayed_test;
+  TEST_INDEX    last_displayed_test;
 }
 DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
-  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     TEST_ULA_INT,    TEST_ULA_CCLK      },
-  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     TEST_Z80_M1,     TEST_Z80_MREQ      },
-  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
+  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               NEVER_RUN, TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
+  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     NEVER_RUN, TEST_ULA_INT,    TEST_ULA_CCLK      },
+  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     NEVER_RUN, TEST_Z80_M1,     TEST_Z80_MREQ      },
+  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    NEVER_RUN, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
@@ -234,6 +242,8 @@ static void core1_main( void )
       
       /* Tear down voltage tests */
       voltage_page_exit();
+
+      page[VOLTAGE_PAGE].run_once = RUN;
     }
     break;
 
@@ -273,6 +283,8 @@ static void core1_main( void )
       
       /* Tear down ULA tests */
       ula_page_exit();
+
+      page[ULA_PAGE].run_once = RUN;
     }
     break;
 
@@ -314,6 +326,8 @@ static void core1_main( void )
 
       /* Tear down Z80 tests */
       z80_page_exit();
+
+      page[Z80_PAGE].run_once = RUN;
     }
     break;
 
@@ -341,6 +355,8 @@ static void core1_main( void )
 
       /* Tear down data bus tests */
       dbus_page_exit();
+
+      page[DBUS_PAGE].run_once = RUN;
     }
     break;
 
@@ -377,7 +393,7 @@ void main( void )
   multicore_launch_core1( core1_main ); 
 
   /* Start with voltages page */
-  current_page = DBUS_PAGE; //VOLTAGE_PAGE;
+  current_page = VOLTAGE_PAGE;
 
   /* Main loop just loops over the result text lines displaying them */
   while( 1 )
@@ -394,15 +410,22 @@ void main( void )
 
     draw_str(0, 0, page[current_page].gui_title );
 
-    uint8_t line=2;
-    for( uint32_t test_index=page[current_page].first_displayed_test; test_index<=page[current_page].last_displayed_test; test_index++ )
-    {      
-      draw_str(0, line*8, "                         " );
-      mutex_enter_blocking( &oled_mutex );      
-      draw_str(0, line*8, result_line_txt[test_index] );      
-      mutex_exit( &oled_mutex );      
-
-      line++;
+    if( page[current_page].run_once == RUN )
+    {
+      uint8_t line=2;
+      for( uint32_t test_index=page[current_page].first_displayed_test; test_index<=page[current_page].last_displayed_test; test_index++ )
+      {      
+	draw_str(0, line*8, "                         " );
+	mutex_enter_blocking( &oled_mutex );      
+	draw_str(0, line*8, result_line_txt[test_index] );      
+	mutex_exit( &oled_mutex );      
+	
+	line++;
+      }
+    }
+    else
+    {
+      draw_str(0, 2*8, "  Tests running...   " );
     }
     update_screen();    
 
