@@ -17,6 +17,7 @@ add_executable(pico1
 	page_ula.c
 	page_z80.c
 	page_dbus.c
+	page_rom.c
 )
 
 pico_generate_pio_header(pico1 ${CMAKE_CURRENT_LIST_DIR}/clk_counter.pio)

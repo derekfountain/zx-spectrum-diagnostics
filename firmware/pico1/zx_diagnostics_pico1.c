@@ -44,6 +44,7 @@
 #include "page_ula.h"
 #include "page_z80.h"
 #include "page_dbus.h"
+#include "page_rom.h"
 
 static uint8_t input1_pressed = 0;
 static uint8_t input2_pressed = 0;
@@ -57,8 +58,9 @@ typedef enum
   ULA_PAGE,
   Z80_PAGE,
   DBUS_PAGE,
+  ROM_PAGE,
 
-  LAST_PAGE = DBUS_PAGE
+  LAST_PAGE = ROM_PAGE
 }
 PAGE;
 
@@ -81,6 +83,8 @@ typedef enum
   TEST_Z80_MREQ,
 
   TEST_DBUS_DBUS,
+
+  TEST_ROM_SEQ,
 
   NUM_TESTS,
 }
@@ -112,6 +116,7 @@ DISPLAY_PAGE page[] =
   { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     NEVER_RUN, TEST_ULA_INT,    TEST_ULA_CCLK      },
   { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     NEVER_RUN, TEST_Z80_M1,     TEST_Z80_MREQ      },
   { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    NEVER_RUN, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
+  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     NEVER_RUN, TEST_ROM_SEQ,    TEST_ROM_SEQ       },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
@@ -357,6 +362,35 @@ static void core1_main( void )
       dbus_page_exit();
 
       page[DBUS_PAGE].run_once = RUN;
+    }
+    break;
+
+    case ROM_PAGE:
+    {
+      /***
+       *      ___   ___   __  __ 
+       *     | _ \ / _ \ |  \/  |
+       *     |   /| (_) || |\/| |
+       *     |_|_\ \___/ |_|  |_|
+       *                         
+       */
+
+      /* Initialise the ROM tests */
+      rom_page_entry();
+      
+      /* Run the ROM sequential bytes test and populate the result lines for the display */
+      rom_page_run_seq_test();
+
+      /* Only one test here so far */
+      rom_page_seq_test_result( result_line, WIDTH_OLED_CHARS );
+      mutex_enter_blocking( &oled_mutex );      
+      strncpy( result_line_txt[TEST_ROM_SEQ], result_line, WIDTH_OLED_CHARS );
+      mutex_exit( &oled_mutex );      
+
+      /* Tear down ROM tests */
+      rom_page_exit();
+
+      page[ROM_PAGE].run_once = RUN;
     }
     break;
 
