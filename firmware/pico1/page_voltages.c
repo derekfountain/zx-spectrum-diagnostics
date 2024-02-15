@@ -4,8 +4,6 @@
  *  +5V voltage divider enters ADC2 which is GPIO28
  */
 
-// 3 more lines with the averages
-
 #include "oled.h"
 #include "page.h"
 
@@ -13,7 +11,15 @@
 #include <string.h>
 #include "hardware/adc.h"
 
-#define NUM_VOLTAGE_TESTS 3
+/* Store last 50 entries so I can work out the averages */
+#define AVERAGE_ARRAY_LEN (uint32_t)50
+static uint32_t average_index = 0;
+
+static float average_5v[AVERAGE_ARRAY_LEN];
+static float average_12v[AVERAGE_ARRAY_LEN];
+static float average_min5v[AVERAGE_ARRAY_LEN];
+
+#define NUM_VOLTAGE_TESTS 6
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_VOLTAGE_TESTS][WIDTH_OLED_CHARS+1];
 
@@ -29,8 +35,37 @@ void voltage_page_entry( void )
 {
 }
 
+/*
+ * When the tests have all run, work out the new averages
+ */
 void voltage_page_exit( void )
 {
+  float average;
+
+  average = 0.0;
+  for( uint32_t av_index=0; av_index<AVERAGE_ARRAY_LEN; av_index++ )
+    average += average_5v[av_index];
+
+  snprintf( result_line_txt[3], WIDTH_OLED_CHARS, "AV  +5V: %0.1fV", average / AVERAGE_ARRAY_LEN );
+
+
+  average = 0.0;
+  for( uint32_t av_index=0; av_index<AVERAGE_ARRAY_LEN; av_index++ )
+    average += average_12v[av_index];
+
+  snprintf( result_line_txt[4], WIDTH_OLED_CHARS, "AV +12V: %0.1fV", average / AVERAGE_ARRAY_LEN );
+
+
+  average = 0.0;
+  for( uint32_t av_index=0; av_index<AVERAGE_ARRAY_LEN; av_index++ )
+    average += average_min5v[av_index];
+
+  snprintf( result_line_txt[5], WIDTH_OLED_CHARS, "AV  -5V: %0.1fV", average / AVERAGE_ARRAY_LEN );
+
+
+  /* Another set of tests run, move the average circular store index */
+  if( ++average_index == AVERAGE_ARRAY_LEN )
+    average_index = 0;
 }
 
 /*
@@ -81,31 +116,52 @@ const float _minus5_ratio = 1.0 - (R101 / (R101 + R102));  // 0.49997 on my test
 void voltage_page_test_5v( void )
 {
   adc_select_input( 2 );
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " +5V: %0.3fV", (adc_read() * conversion_factor) / _5v_ratio );
+  float reading = (adc_read() * conversion_factor) / _5v_ratio;
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "    +5V: %0.3fV", reading );
+
+  average_5v[average_index] = reading;
 }
 
 
 void voltage_page_test_12v( void )
 {
   adc_select_input( 1 );
-  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "+12V: %0.3fV", (adc_read() * conversion_factor) / _12v_ratio );
+  float reading = (adc_read() * conversion_factor) / _12v_ratio;
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "   +12V: %0.3fV", reading );
+
+  average_12v[average_index] = reading;
 }
 
 
 void voltage_page_test_minus5v( void )
 {
   adc_select_input( 0 );
-  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, " -5V: %0.3fV", ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00 );
+  float reading = ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00;
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "    -5V: %0.3fV", reading );
+
+  average_min5v[average_index] = reading;
 }
 
 
 void voltage_output(void)
 {
+  /*
+   * I've only got 6 lines, so there's a bit of crude, hard coded jiggling
+   * about here to get a gap between the values and the average values.
+   */
   uint8_t line=2;
-  for( uint32_t test_index=0; test_index<NUM_VOLTAGE_TESTS; test_index++ )
+  for( uint32_t test_index=0; test_index<3; test_index++ )
   {      
-    draw_str(0, line*8, "                         " );
-    draw_str(0, line*8, result_line_txt[test_index] );      
+    draw_str(0, line*8-2, "                         " );
+    draw_str(0, line*8-2, result_line_txt[test_index] );      
+	
+    line++;
+  }
+
+  for( uint32_t test_index=3; test_index<6; test_index++ )
+  {      
+    draw_str(0, line*8+1, "                         " );
+    draw_str(0, line*8+1, result_line_txt[test_index] );      
 	
     line++;
   }
