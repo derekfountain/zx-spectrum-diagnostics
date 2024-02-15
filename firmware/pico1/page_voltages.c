@@ -4,12 +4,18 @@
  *  +5V voltage divider enters ADC2 which is GPIO28
  */
 
+// 3 more lines with the averages
+
 #include "oled.h"
 #include "page.h"
 
 #include <stdio.h>
 #include <string.h>
 #include "hardware/adc.h"
+
+#define NUM_VOLTAGE_TESTS 3
+#define WIDTH_OLED_CHARS 32
+static uint8_t result_line_txt[NUM_VOLTAGE_TESTS][WIDTH_OLED_CHARS+1];
 
 void voltage_page_init( void )
 {
@@ -72,31 +78,35 @@ const float _5v_ratio     = 1.0 - (R103 / (R103 + R104));  // 0.50000 on my test
 const float _12v_ratio    = 1.0 - (R105 / (R105 + R106));  // 0.20935 on my test board
 const float _minus5_ratio = 1.0 - (R101 / (R101 + R102));  // 0.49997 on my test board
 
-void voltage_page_test_5v( uint8_t *result_txt, uint32_t result_txt_max_len )
+void voltage_page_test_5v( void )
 {
-  uint8_t _5v_line[32];
-
   adc_select_input( 2 );
-  sprintf( _5v_line,       " +5V: %0.3fV", (adc_read() * conversion_factor) / _5v_ratio );
-  strncpy( result_txt, _5v_line, result_txt_max_len );
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " +5V: %0.3fV", (adc_read() * conversion_factor) / _5v_ratio );
 }
 
 
-void voltage_page_test_12v( uint8_t *result_txt, uint32_t result_txt_max_len )
+void voltage_page_test_12v( void )
 {
-  uint8_t _12v_line[32];
-
   adc_select_input( 1 );
-  sprintf( _12v_line,      "+12V: %0.3fV", (adc_read() * conversion_factor) / _12v_ratio );
-  strncpy( result_txt, _12v_line, result_txt_max_len );
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "+12V: %0.3fV", (adc_read() * conversion_factor) / _12v_ratio );
 }
 
 
-void voltage_page_test_minus5v( uint8_t *result_txt, uint32_t result_txt_max_len )
+void voltage_page_test_minus5v( void )
 {
-  uint8_t _minus5v_line[32];
-
   adc_select_input( 0 );
-  sprintf( _minus5v_line, " -5V: %0.3fV", ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00 );
-  strncpy( result_txt, _minus5v_line, result_txt_max_len );
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, " -5V: %0.3fV", ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00 );
+}
+
+
+void voltage_output(void)
+{
+  uint8_t line=2;
+  for( uint32_t test_index=0; test_index<NUM_VOLTAGE_TESTS; test_index++ )
+  {      
+    draw_str(0, line*8, "                         " );
+    draw_str(0, line*8, result_line_txt[test_index] );      
+	
+    line++;
+  }
 }

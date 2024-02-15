@@ -14,6 +14,10 @@
 #define TEST_TIME_SECS   2
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
+#define NUM_DBUS_TESTS 1
+#define WIDTH_OLED_CHARS 32
+static uint8_t result_line_txt[NUM_DBUS_TESTS][WIDTH_OLED_CHARS+1];
+
 static SEEN_EDGE d0_flag   = SEEN_NEITHER;
 static SEEN_EDGE d1_flag   = SEEN_NEITHER;
 static SEEN_EDGE d2_flag   = SEEN_NEITHER;
@@ -156,21 +160,28 @@ void dbus_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( dbus_alarm_id );
+
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "Present: %c%c%c%c%c%c%c%c",
+	    d7_flag == SEEN_BOTH ? '7' : 'x',
+	    d6_flag == SEEN_BOTH ? '6' : 'x',
+	    d5_flag == SEEN_BOTH ? '5' : 'x',
+	    d4_flag == SEEN_BOTH ? '4' : 'x',
+	    d3_flag == SEEN_BOTH ? '3' : 'x',
+	    d2_flag == SEEN_BOTH ? '2' : 'x',
+	    d1_flag == SEEN_BOTH ? '1' : 'x',
+	    d0_flag == SEEN_BOTH ? '0' : 'x');
+
 }
 
 
-void dbus_page_test_result( uint8_t *result_txt, uint32_t result_txt_max_len )
+void dbus_output(void)
 {
-  uint8_t result_line[32];
-
-  sprintf( result_line, "Present: %c%c%c%c%c%c%c%c",
-	                d7_flag == SEEN_BOTH ? '7' : 'x',
-                        d6_flag == SEEN_BOTH ? '6' : 'x',
-                        d5_flag == SEEN_BOTH ? '5' : 'x',
-                        d4_flag == SEEN_BOTH ? '4' : 'x',
-                        d3_flag == SEEN_BOTH ? '3' : 'x',
-                        d2_flag == SEEN_BOTH ? '2' : 'x',
-                        d1_flag == SEEN_BOTH ? '1' : 'x',
-	                d0_flag == SEEN_BOTH ? '0' : 'x');
-  strncpy( result_txt, result_line, result_txt_max_len );
+  uint8_t line=2;
+  for( uint32_t test_index=0; test_index<NUM_DBUS_TESTS; test_index++ )
+  {      
+    draw_str(0, line*8, "                         " );
+    draw_str(0, line*8, result_line_txt[test_index] );      
+	
+    line++;
+  }  
 }

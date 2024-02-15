@@ -49,8 +49,6 @@
 static uint8_t input1_pressed = 0;
 static uint8_t input2_pressed = 0;
 
-auto_init_mutex( oled_mutex );
-
 /* Set of pages, press button 1 to cycle these */
 typedef enum
 {
@@ -102,8 +100,9 @@ typedef struct
 {
   PAGE          page;
   uint8_t      *gui_title;
-  void         (*init_func)(void);
-  void         (*gpio_func)( uint32_t, uint32_t );
+  void         (*init_func)(void);                       // Initialise
+  void         (*gpio_func)( uint32_t, uint32_t );       // A GPIO line has changed state
+  void         (*display_func)( void );                  // Display your output now
   RUN_ONCE_FLAG run_once;
   TEST_INDEX    first_displayed_test;
   TEST_INDEX    last_displayed_test;
@@ -112,11 +111,11 @@ DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               NEVER_RUN, TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
-  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     NEVER_RUN, TEST_ULA_INT,    TEST_ULA_CCLK      },
-  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     NEVER_RUN, TEST_Z80_M1,     TEST_Z80_MREQ      },
-  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    NEVER_RUN, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
-  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     NEVER_RUN, TEST_ROM_SEQ,    TEST_ROM_SEQ       },
+  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               voltage_output, NEVER_RUN, TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
+  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     ula_output,     NEVER_RUN, TEST_ULA_INT,    TEST_ULA_CCLK      },
+  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     z80_output,     NEVER_RUN, TEST_Z80_M1,     TEST_Z80_MREQ      },
+  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    dbus_output,    NEVER_RUN, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
+  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     rom_output,     NEVER_RUN, TEST_ROM_SEQ,    TEST_ROM_SEQ       },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
@@ -228,22 +227,13 @@ static void core1_main( void )
       voltage_page_entry();
 
       /* Run the 5V rail test and populate the result line for the display */
-      voltage_page_test_5v( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_VOLTAGE_5V], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
+      voltage_page_test_5v();
       
       /* Run the 12V rail test and populate the result line for the display */
-      voltage_page_test_12v( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_VOLTAGE_12V], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
+      voltage_page_test_12v();
       
       /* Run the -5V rail test and populate the result line for the display */
-      voltage_page_test_minus5v( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_VOLTAGE_MIN5V], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
+      voltage_page_test_minus5v();
       
       /* Tear down voltage tests */
       voltage_page_exit();
@@ -268,24 +258,6 @@ static void core1_main( void )
       /* The ULA tests are all run in one function */
       ula_page_run_tests();
     
-      /* Pick up the interrupt test result and populate the result line for the display */
-      ula_page_test_int( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_ULA_INT], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-
-      /* Pick up the clock test result and populate the result line for the display */
-      ula_page_test_clk( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_ULA_CLK], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-
-      /* Pick up the contended clock test result and populate the result line for the display */
-      ula_page_test_c_clk( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_ULA_CCLK], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-      
       /* Tear down ULA tests */
       ula_page_exit();
 
@@ -308,26 +280,6 @@ static void core1_main( void )
 
       /* Run the Z80 tests and populate the result lines for the display */
       z80_page_run_tests();
-
-      z80_page_test_m1( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_Z80_M1], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-
-      z80_page_test_rd( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_Z80_RD], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-
-      z80_page_test_wr( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_Z80_WR], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-
-      z80_page_test_mreq( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_Z80_MREQ], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
 
       /* Tear down Z80 tests */
       z80_page_exit();
@@ -352,12 +304,6 @@ static void core1_main( void )
       /* Run the data bus tests and populate the result lines for the display */
       dbus_page_run_tests();
 
-      /* Only one test here so far */
-      dbus_page_test_result( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_DBUS_DBUS], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
-
       /* Tear down data bus tests */
       dbus_page_exit();
 
@@ -380,12 +326,6 @@ static void core1_main( void )
       
       /* Run the ROM sequential bytes test and populate the result lines for the display */
       rom_page_run_seq_test();
-
-      /* Only one test here so far */
-      rom_page_seq_test_result( result_line, WIDTH_OLED_CHARS );
-      mutex_enter_blocking( &oled_mutex );      
-      strncpy( result_line_txt[TEST_ROM_SEQ], result_line, WIDTH_OLED_CHARS );
-      mutex_exit( &oled_mutex );      
 
       /* Tear down ROM tests */
       rom_page_exit();
@@ -446,16 +386,8 @@ void main( void )
 
     if( page[current_page].run_once == RUN )
     {
-      uint8_t line=2;
-      for( uint32_t test_index=page[current_page].first_displayed_test; test_index<=page[current_page].last_displayed_test; test_index++ )
-      {      
-	draw_str(0, line*8, "                         " );
-	mutex_enter_blocking( &oled_mutex );      
-	draw_str(0, line*8, result_line_txt[test_index] );      
-	mutex_exit( &oled_mutex );      
-	
-	line++;
-      }
+      /* Call the module's display function, it prints its own results */
+      (page[current_page].display_func)();
     }
     else
     {

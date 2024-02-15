@@ -6,9 +6,10 @@
 
 void voltage_page_init( void );
 void voltage_page_entry( void );
-void voltage_page_test_5v( uint8_t *result_txt, uint32_t result_txt_max_len );
-void voltage_page_test_12v( uint8_t *result_txt, uint32_t result_txt_max_len );
-void voltage_page_test_minus5v( uint8_t *result_txt, uint32_t result_txt_max_len );
+void voltage_page_test_5v( void );
+void voltage_page_test_12v( void );
+void voltage_page_test_minus5v( void );
+void voltage_output(void);
 void voltage_page_exit( void );
 
 #endif

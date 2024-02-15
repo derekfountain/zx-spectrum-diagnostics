@@ -10,6 +10,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#define NUM_ROM_TESTS 1
+#define WIDTH_OLED_CHARS 32
+static uint8_t result_line_txt[NUM_ROM_TESTS][WIDTH_OLED_CHARS+1];
+
 /* Long enough to let the Spectrum boot and run a decent part of the ROM */
 #define TEST_TIME_SECS   2
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
@@ -46,13 +50,19 @@ void rom_page_gpios( uint32_t gpio, uint32_t events )
 
 void rom_page_run_seq_test( void )
 {
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " Seq: Not ready");
 }
 
 
-void rom_page_seq_test_result( uint8_t *result_txt, uint32_t result_txt_max_len )
-{
-  uint8_t result_line[32];
 
-  sprintf( result_line, " Seq: Not ready");
-  strncpy( result_txt, result_line, result_txt_max_len );
+void rom_output(void)
+{
+  uint8_t line=2;
+  for( uint32_t test_index=0; test_index<NUM_ROM_TESTS; test_index++ )
+  {      
+    draw_str(0, line*8, "                         " );
+    draw_str(0, line*8, result_line_txt[test_index] );      
+	
+    line++;
+  }  
 }

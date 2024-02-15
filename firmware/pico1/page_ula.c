@@ -22,6 +22,10 @@ static uint32_t c_clk_counter;
 static uint32_t interrupt_counter = 0;
 static uint32_t clock_counter     = 0;
 
+#define NUM_ULA_TESTS 3
+#define WIDTH_OLED_CHARS 32
+static uint8_t result_line_txt[NUM_ULA_TESTS][WIDTH_OLED_CHARS+1];
+
 static bool test_running = false;
 
 static void test_blipper( void )
@@ -60,7 +64,7 @@ void ula_page_entry( void )
 
 void ula_page_exit( void )
 {
-//  gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, false );
+  gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, false );
 }
 
 void ula_page_gpios( uint32_t gpio, uint32_t events )
@@ -187,35 +191,21 @@ void ula_page_run_tests( void )
   cancel_alarm( ula_alarm_id );
 
   /* We exit these tests with the Z80 running */
+
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " INT: %0.2fHz", ((float)(interrupt_counter)) / TEST_TIME_SECS_F/2.0 );
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, " CLK: %0.2fMHz", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "cCLK: %0.2fMHz", ((float)(c_clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
 }
 
 
-void ula_page_test_int( uint8_t *result_txt, uint32_t result_txt_max_len )
+void ula_output(void)
 {
-  uint8_t interrupt_line[32];
-
-  /*
-   * The interrupt counter test runs while the non-contended and contended tests
-   * run. i.e. twice. I could make it run just the once, but it's easier to 
-   * divide the result by 2 here. :)
-   */
-  sprintf( interrupt_line, " INT: %0.2fHz", ((float)(interrupt_counter)) / TEST_TIME_SECS_F/2.0 );
-  strncpy( result_txt, interrupt_line, result_txt_max_len );
+  uint8_t line=2;
+  for( uint32_t test_index=0; test_index<NUM_ULA_TESTS; test_index++ )
+  {      
+    draw_str(0, line*8, "                         " );
+    draw_str(0, line*8, result_line_txt[test_index] );      
+	
+    line++;
+  }  
 }
-
-void ula_page_test_clk( uint8_t *result_txt, uint32_t result_txt_max_len )
-{
-  uint8_t clock_line[32];
-
-  sprintf( clock_line, " CLK: %0.2fMHz", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
-  strncpy( result_txt, clock_line, result_txt_max_len );
-}
-
-void ula_page_test_c_clk( uint8_t *result_txt, uint32_t result_txt_max_len )
-{
-  uint8_t clock_line[32];
-
-  sprintf( clock_line, "cCLK: %0.2fMHz", ((float)(c_clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
-  strncpy( result_txt, clock_line, result_txt_max_len );
-}
-

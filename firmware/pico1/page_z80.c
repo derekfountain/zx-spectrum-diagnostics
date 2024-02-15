@@ -19,6 +19,10 @@ static SEEN_EDGE rd_flag   = SEEN_NEITHER;
 static SEEN_EDGE wr_flag   = SEEN_NEITHER;
 static SEEN_EDGE mreq_flag = SEEN_NEITHER;
 
+#define NUM_Z80_TESTS 4
+#define WIDTH_OLED_CHARS 32
+static uint8_t result_line_txt[NUM_Z80_TESTS][WIDTH_OLED_CHARS+1];
+
 static bool z80_test_running = false;
 
 static void test_blipper( void )
@@ -176,37 +180,23 @@ void z80_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( z80_alarm_id );
+
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "  M1: %s", m1_flag == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "  RD: %s", rd_flag == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "  WR: %s", wr_flag == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[3], WIDTH_OLED_CHARS, "MREQ: %s", mreq_flag == SEEN_BOTH ? "OK" : "Inactive" );
+
 }
 
 
-void z80_page_test_m1( uint8_t *result_txt, uint32_t result_txt_max_len )
+void z80_output(void)
 {
-  uint8_t result_line[32];
-
-  sprintf( result_line, "  M1: %s", m1_flag == SEEN_BOTH ? "OK" : "Inactive" );
-  strncpy( result_txt, result_line, result_txt_max_len );
-}
-
-void z80_page_test_rd( uint8_t *result_txt, uint32_t result_txt_max_len )
-{
-  uint8_t result_line[32];
-
-  sprintf( result_line, "  RD: %s", rd_flag == SEEN_BOTH ? "OK" : "Inactive" );
-  strncpy( result_txt, result_line, result_txt_max_len );
-}
-
-void z80_page_test_wr( uint8_t *result_txt, uint32_t result_txt_max_len )
-{
-  uint8_t result_line[32];
-
-  sprintf( result_line, "  WR: %s", wr_flag == SEEN_BOTH ? "OK" : "Inactive" );
-  strncpy( result_txt, result_line, result_txt_max_len );
-}
-
-void z80_page_test_mreq( uint8_t *result_txt, uint32_t result_txt_max_len )
-{
-  uint8_t result_line[32];
-
-  sprintf( result_line, "MREQ: %s", mreq_flag == SEEN_BOTH ? "OK" : "Inactive" );
-  strncpy( result_txt, result_line, result_txt_max_len );
+  uint8_t line=2;
+  for( uint32_t test_index=0; test_index<NUM_Z80_TESTS; test_index++ )
+  {      
+    draw_str(0, line*8, "                         " );
+    draw_str(0, line*8, result_line_txt[test_index] );      
+	
+    line++;
+  }  
 }

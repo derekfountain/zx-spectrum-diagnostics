@@ -65,3 +65,11 @@ Wire up ZXM1 to GPIO11 on Pico1. Will reveal if Z80 is one with broken M1.
 
 v1.1 Second board, has the correct edge connector footprint
 ===========================================================
+
+Missing off /IORQ was a mistake. Need to find a way to get
+that back.
+
+
+I'm only using a single input button. Remove the other, reclaim
+the GPIO.
+: To be confirmed.
