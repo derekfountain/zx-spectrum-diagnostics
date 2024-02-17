@@ -65,6 +65,10 @@ void ula_page_entry( void )
 void ula_page_exit( void )
 {
   gpio_set_irq_enabled( GPIO_Z80_INT, GPIO_IRQ_EDGE_FALL, false );
+
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " INT: %0.2fHz", ((float)(interrupt_counter)) / TEST_TIME_SECS_F/2.0 );
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, " CLK: %0.2fMHz", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "cCLK: %0.2fMHz", ((float)(c_clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
 }
 
 void ula_page_gpios( uint32_t gpio, uint32_t events )
@@ -78,7 +82,6 @@ void ula_page_gpios( uint32_t gpio, uint32_t events )
     if( test_running )
     {
       interrupt_counter++;
-      test_blipper();
     }
   }
 }
@@ -123,6 +126,8 @@ void ula_page_run_tests( void )
   interrupt_counter = 0;
   test_running = true;
   alarm_id_t ula_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, ula_alarm_callback, NULL, false );
+  if( ula_alarm_id < 0 )
+    panic("No alarms available in ULA test");
 
   /* Bump the PIO to start the program, then wait for the timer alarm */
   pio_sm_put( pio, sm_clk, 1 );
@@ -166,6 +171,8 @@ void ula_page_run_tests( void )
   /* Restart the alarm which defines the duration of the test */
   test_running = true;
   ula_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, ula_alarm_callback, NULL, false );
+  if( ula_alarm_id < 0 )
+    panic("No alarms available in ULA test");
 
   /* Kick the state machine to make it start counting from 0 again */
   pio_sm_put( pio, sm_clk, 1 );
@@ -191,10 +198,6 @@ void ula_page_run_tests( void )
   cancel_alarm( ula_alarm_id );
 
   /* We exit these tests with the Z80 running */
-
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " INT: %0.2fHz", ((float)(interrupt_counter)) / TEST_TIME_SECS_F/2.0 );
-  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, " CLK: %0.2fMHz", ((float)(clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
-  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "cCLK: %0.2fMHz", ((float)(c_clk_counter)/TEST_TIME_SECS_F) / 1000000.0 );
 }
 
 

@@ -106,25 +106,20 @@ typedef struct
   void            (*init_func)(void);                       // Initialise
   void            (*gpio_func)( uint32_t, uint32_t );       // A GPIO line has changed state
   void            (*display_func)( void );                  // Display your output now
-  SHOW_RESULT_FLAG  run_once;
-  TEST_INDEX        first_displayed_test;
-  TEST_INDEX        last_displayed_test;
+  SHOW_RESULT_FLAG  show_result;
 }
 DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               voltage_output, NEEDS_RUNNING, TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
-  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     ula_output,     NEEDS_RUNNING, TEST_ULA_INT,    TEST_ULA_CCLK      },
-  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     z80_output,     NEEDS_RUNNING, TEST_Z80_M1,     TEST_Z80_MREQ      },
-  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    dbus_output,    NEEDS_RUNNING, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
-  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     rom_output,     NEEDS_RUNNING, TEST_ROM_SEQ,    TEST_ROM_SEQ       },
+  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               voltage_output, NEEDS_RUNNING },
+  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     ula_output,     NEEDS_RUNNING },
+  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     z80_output,     NEEDS_RUNNING },
+  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    dbus_output,    NEEDS_RUNNING },
+  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     rom_output,     NEEDS_RUNNING },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
-
-#define WIDTH_OLED_CHARS 32
-static uint8_t result_line_txt[NUM_TESTS][WIDTH_OLED_CHARS];
 
 /* From the timer_lowlevel.c example */
 static uint64_t get_time_us( void )
@@ -188,8 +183,6 @@ void gpios_callback( uint gpio, uint32_t events )
  */
 static void core1_main( void )
 {
-  uint8_t result_line[WIDTH_OLED_CHARS];
-
   /*
    * This core handles the test GPIO handling, and therefore has to handle the
    * user interface buttons as well (because only one GPIO IRQ handler is allowed)
@@ -241,7 +234,7 @@ static void core1_main( void )
       /* Tear down voltage tests */
       voltage_page_exit();
 
-      page[VOLTAGE_PAGE].run_once = RESULT_READY;
+      page[VOLTAGE_PAGE].show_result = RESULT_READY;
     }
     break;
 
@@ -264,7 +257,7 @@ static void core1_main( void )
       /* Tear down ULA tests */
       ula_page_exit();
 
-      page[ULA_PAGE].run_once = RESULT_READY;
+      page[ULA_PAGE].show_result = RESULT_READY;
     }
     break;
 
@@ -287,7 +280,7 @@ static void core1_main( void )
       /* Tear down Z80 tests */
       z80_page_exit();
 
-      page[Z80_PAGE].run_once = RESULT_READY;
+      page[Z80_PAGE].show_result = RESULT_READY;
     }
     break;
 
@@ -310,7 +303,7 @@ static void core1_main( void )
       /* Tear down data bus tests */
       dbus_page_exit();
 
-      page[DBUS_PAGE].run_once = RESULT_READY;
+      page[DBUS_PAGE].show_result = RESULT_READY;
     }
     break;
 
@@ -333,7 +326,7 @@ static void core1_main( void )
       /* Tear down ROM tests */
       rom_page_exit();
 
-      page[ROM_PAGE].run_once = RESULT_READY;
+      page[ROM_PAGE].show_result = RESULT_READY;
     }
     break;
 
@@ -352,10 +345,6 @@ void main( void )
   bi_decl(bi_program_description("ZX Spectrum Diagnostics Pico1 Board Binary."));
 
   sleep_ms( 1000 );
-
-  uint8_t line;
-  for( line=0; line<NUM_TESTS; line++ )
-    result_line_txt[line][0] = '\0';
 
   /* Initialise OLED screen with default font */
   init_oled( NULL );
@@ -378,14 +367,14 @@ void main( void )
     /*
      * If the user button has been pressed, as indicated by the GPIO callback routine,
      * move to the next page. The new page to show is flagged as needing to be run so
-     * stale test restult data it's holding isn't shown.
+     * stale test result data it's holding isn't shown.
      */
     if( input1_pressed )
     {
       if( current_page++ == LAST_PAGE )
 	current_page = VOLTAGE_PAGE;
 
-      page[current_page].run_once = NEEDS_RUNNING;
+      page[current_page].show_result = NEEDS_RUNNING;
 
       input1_pressed = 0;
 
@@ -394,7 +383,7 @@ void main( void )
 
     draw_str(0, 0, page[current_page].gui_title );
 
-    if( page[current_page].run_once == RESULT_READY )
+    if( page[current_page].show_result == RESULT_READY )
     {
       /* Call the module's display function, it prints its own results */
       (page[current_page].display_func)();

@@ -82,6 +82,16 @@ void dbus_page_exit( void )
   gpio_set_irq_enabled( GPIO_DBUS_D5, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
   gpio_set_irq_enabled( GPIO_DBUS_D6, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
   gpio_set_irq_enabled( GPIO_DBUS_D7, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "Present: %c%c%c%c%c%c%c%c",
+	    d7_flag == SEEN_BOTH ? '7' : 'x',
+	    d6_flag == SEEN_BOTH ? '6' : 'x',
+	    d5_flag == SEEN_BOTH ? '5' : 'x',
+	    d4_flag == SEEN_BOTH ? '4' : 'x',
+	    d3_flag == SEEN_BOTH ? '3' : 'x',
+	    d2_flag == SEEN_BOTH ? '2' : 'x',
+	    d1_flag == SEEN_BOTH ? '1' : 'x',
+	    d0_flag == SEEN_BOTH ? '0' : 'x');
 }
 
 void dbus_page_gpios( uint32_t gpio, uint32_t events )
@@ -139,19 +149,41 @@ void dbus_page_gpios( uint32_t gpio, uint32_t events )
 	gpio_set_irq_enabled( gpio, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
       }
     }
+    else
+    {
+      panic("DBUS code received invalid GPIO %d", gpio);
+    }
   }
 }
 
 void dbus_page_run_tests( void )
 {
+  dbus_test_running = false;
+
   /*
-   * Allow the Z80 to run. Test starts immediately.
+   * Reboot the Spectrum.
    */
+  gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 5 );
   gpio_put( GPIO_Z80_RESET, 0 );
 
-  /* Restart the alarm which defines the duration of the test */
+  /*
+   * I had a 
+   *  sleep_ms( 650 );
+   * in here, which isn't really necessary because I want to start monitoring
+   * the data bus as soon as the Z80 is ready to run. I don't need to pause.
+   * Thing is, that paused effectively stopped the Pico. I think it was
+   * because with the 8 data bus GPIOs set up and firing the callback, when
+   * the Z80 runs the flood of callbacks overwhelmes the Pico and it stalls
+   * before the code below which sets up the alarm. The alarm never happens
+   * and the test apparently runs forever.
+   * Maybe, not sure, but taking that sleep out fixes it.
+   */
+
+  /* Start the alarm which defines the duration of the test */
   dbus_test_running = true;
   alarm_id_t dbus_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, dbus_alarm_callback, NULL, false );
+  if( dbus_alarm_id < 0 )
+    panic("No alarms available in DBUS test");
 
   while( dbus_test_running );
 
@@ -160,17 +192,6 @@ void dbus_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( dbus_alarm_id );
-
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "Present: %c%c%c%c%c%c%c%c",
-	    d7_flag == SEEN_BOTH ? '7' : 'x',
-	    d6_flag == SEEN_BOTH ? '6' : 'x',
-	    d5_flag == SEEN_BOTH ? '5' : 'x',
-	    d4_flag == SEEN_BOTH ? '4' : 'x',
-	    d3_flag == SEEN_BOTH ? '3' : 'x',
-	    d2_flag == SEEN_BOTH ? '2' : 'x',
-	    d1_flag == SEEN_BOTH ? '1' : 'x',
-	    d0_flag == SEEN_BOTH ? '0' : 'x');
-
 }
 
 

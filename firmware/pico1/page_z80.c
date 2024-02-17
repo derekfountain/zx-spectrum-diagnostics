@@ -11,7 +11,7 @@
 #include <string.h>
 
 /* Long enough to let the Spectrum boot and run a decent part of the ROM */
-#define TEST_TIME_SECS   3
+#define TEST_TIME_SECS   1
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
 static SEEN_EDGE m1_flag   = SEEN_NEITHER;
@@ -24,20 +24,6 @@ static SEEN_EDGE mreq_flag = SEEN_NEITHER;
 static uint8_t result_line_txt[NUM_Z80_TESTS][WIDTH_OLED_CHARS+1];
 
 static bool z80_test_running = false;
-
-static void test_blipper( void )
-{
-  gpio_put( GPIO_P1_BLIPPER, 1 );
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  gpio_put( GPIO_P1_BLIPPER, 0 );
-}
 
 static int64_t __time_critical_func(z80_alarm_callback)(alarm_id_t id, void *user_data)
 {
@@ -73,6 +59,11 @@ void z80_page_exit( void )
   gpio_set_irq_enabled( GPIO_Z80_RD,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
   gpio_set_irq_enabled( GPIO_Z80_WR,   GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
   gpio_set_irq_enabled( GPIO_Z80_MREQ, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "  M1: %s", m1_flag   == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "  RD: %s", rd_flag   == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "  WR: %s", wr_flag   == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[3], WIDTH_OLED_CHARS, "MREQ: %s", mreq_flag == SEEN_BOTH ? "OK" : "Inactive" );
 }
 
 void z80_page_gpios( uint32_t gpio, uint32_t events )
@@ -172,6 +163,8 @@ void z80_page_run_tests( void )
   /* Restart the alarm which defines the duration of the test */
   z80_test_running = true;
   alarm_id_t z80_alarm_id = add_alarm_in_ms( TEST_TIME_SECS*1000, z80_alarm_callback, NULL, false );
+  if( z80_alarm_id < 0 )
+    panic("No alarms available in Z80 test");
 
   while( z80_test_running );
 
@@ -180,12 +173,6 @@ void z80_page_run_tests( void )
    * timing system something else might need to go here
    */
   cancel_alarm( z80_alarm_id );
-
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "  M1: %s", m1_flag   == SEEN_BOTH ? "OK" : "Inactive" );
-  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "  RD: %s", rd_flag   == SEEN_BOTH ? "OK" : "Inactive" );
-  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "  WR: %s", wr_flag   == SEEN_BOTH ? "OK" : "Inactive" );
-  snprintf( result_line_txt[3], WIDTH_OLED_CHARS, "MREQ: %s", mreq_flag == SEEN_BOTH ? "OK" : "Inactive" );
-
 }
 
 
