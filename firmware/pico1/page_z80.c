@@ -181,9 +181,9 @@ void z80_page_run_tests( void )
    */
   cancel_alarm( z80_alarm_id );
 
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "  M1: %s", m1_flag == SEEN_BOTH ? "OK" : "Inactive" );
-  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "  RD: %s", rd_flag == SEEN_BOTH ? "OK" : "Inactive" );
-  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "  WR: %s", wr_flag == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "  M1: %s", m1_flag   == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "  RD: %s", rd_flag   == SEEN_BOTH ? "OK" : "Inactive" );
+  snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "  WR: %s", wr_flag   == SEEN_BOTH ? "OK" : "Inactive" );
   snprintf( result_line_txt[3], WIDTH_OLED_CHARS, "MREQ: %s", mreq_flag == SEEN_BOTH ? "OK" : "Inactive" );
 
 }

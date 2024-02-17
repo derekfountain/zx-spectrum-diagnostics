@@ -93,32 +93,32 @@ TEST_INDEX;
 
 typedef enum
 {
-  NEVER_RUN,
-  RUN,
+  NEEDS_RUNNING,
+  RESULT_READY,
 }
-RUN_ONCE_FLAG;
+SHOW_RESULT_FLAG;
 
 /* Paging, for the user interface */
 typedef struct
 {
-  PAGE          page;
-  uint8_t      *gui_title;
-  void         (*init_func)(void);                       // Initialise
-  void         (*gpio_func)( uint32_t, uint32_t );       // A GPIO line has changed state
-  void         (*display_func)( void );                  // Display your output now
-  RUN_ONCE_FLAG run_once;
-  TEST_INDEX    first_displayed_test;
-  TEST_INDEX    last_displayed_test;
+  PAGE              page;
+  uint8_t          *gui_title;
+  void            (*init_func)(void);                       // Initialise
+  void            (*gpio_func)( uint32_t, uint32_t );       // A GPIO line has changed state
+  void            (*display_func)( void );                  // Display your output now
+  SHOW_RESULT_FLAG  run_once;
+  TEST_INDEX        first_displayed_test;
+  TEST_INDEX        last_displayed_test;
 }
 DISPLAY_PAGE;
 
 DISPLAY_PAGE page[] =
 {
-  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               voltage_output, NEVER_RUN, TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
-  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     ula_output,     NEVER_RUN, TEST_ULA_INT,    TEST_ULA_CCLK      },
-  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     z80_output,     NEVER_RUN, TEST_Z80_M1,     TEST_Z80_MREQ      },
-  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    dbus_output,    NEVER_RUN, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
-  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     rom_output,     NEVER_RUN, TEST_ROM_SEQ,    TEST_ROM_SEQ       },
+  { VOLTAGE_PAGE, "VOLTAGES",    voltage_page_init, NULL,               voltage_output, NEEDS_RUNNING, TEST_VOLTAGE_5V, TEST_VOLTAGE_MIN5V },
+  { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     ula_output,     NEEDS_RUNNING, TEST_ULA_INT,    TEST_ULA_CCLK      },
+  { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     z80_output,     NEEDS_RUNNING, TEST_Z80_M1,     TEST_Z80_MREQ      },
+  { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    dbus_output,    NEEDS_RUNNING, TEST_DBUS_DBUS,  TEST_DBUS_DBUS     },
+  { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     rom_output,     NEEDS_RUNNING, TEST_ROM_SEQ,    TEST_ROM_SEQ       },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
 
@@ -241,7 +241,7 @@ static void core1_main( void )
       /* Tear down voltage tests */
       voltage_page_exit();
 
-      page[VOLTAGE_PAGE].run_once = RUN;
+      page[VOLTAGE_PAGE].run_once = RESULT_READY;
     }
     break;
 
@@ -264,7 +264,7 @@ static void core1_main( void )
       /* Tear down ULA tests */
       ula_page_exit();
 
-      page[ULA_PAGE].run_once = RUN;
+      page[ULA_PAGE].run_once = RESULT_READY;
     }
     break;
 
@@ -287,7 +287,7 @@ static void core1_main( void )
       /* Tear down Z80 tests */
       z80_page_exit();
 
-      page[Z80_PAGE].run_once = RUN;
+      page[Z80_PAGE].run_once = RESULT_READY;
     }
     break;
 
@@ -310,7 +310,7 @@ static void core1_main( void )
       /* Tear down data bus tests */
       dbus_page_exit();
 
-      page[DBUS_PAGE].run_once = RUN;
+      page[DBUS_PAGE].run_once = RESULT_READY;
     }
     break;
 
@@ -333,7 +333,7 @@ static void core1_main( void )
       /* Tear down ROM tests */
       rom_page_exit();
 
-      page[ROM_PAGE].run_once = RUN;
+      page[ROM_PAGE].run_once = RESULT_READY;
     }
     break;
 
@@ -375,10 +375,17 @@ void main( void )
   /* Main loop just loops over the result text lines displaying them */
   while( 1 )
   {
+    /*
+     * If the user button has been pressed, as indicated by the GPIO callback routine,
+     * move to the next page. The new page to show is flagged as needing to be run so
+     * stale test restult data it's holding isn't shown.
+     */
     if( input1_pressed )
     {
       if( current_page++ == LAST_PAGE )
 	current_page = VOLTAGE_PAGE;
+
+      page[current_page].run_once = NEEDS_RUNNING;
 
       input1_pressed = 0;
 
@@ -387,7 +394,7 @@ void main( void )
 
     draw_str(0, 0, page[current_page].gui_title );
 
-    if( page[current_page].run_once == RUN )
+    if( page[current_page].run_once == RESULT_READY )
     {
       /* Call the module's display function, it prints its own results */
       (page[current_page].display_func)();
