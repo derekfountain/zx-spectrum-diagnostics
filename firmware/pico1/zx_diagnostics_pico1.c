@@ -44,6 +44,7 @@
 #include "page_ula.h"
 #include "page_z80.h"
 #include "page_dbus.h"
+#include "page_abus.h"
 #include "page_rom.h"
 
 static uint8_t input1_pressed = 0;
@@ -55,6 +56,7 @@ typedef enum
   ULA_PAGE,
   Z80_PAGE,
   DBUS_PAGE,
+  ABUS_PAGE,
   ROM_PAGE,
 
   LAST_PAGE = ROM_PAGE
@@ -83,6 +85,8 @@ typedef enum
   TEST_Z80_MREQ,
 
   TEST_DBUS_DBUS,
+
+  TEST_ABUS_ABUS,
 
   TEST_ROM_SEQ,
 
@@ -115,6 +119,7 @@ DISPLAY_PAGE page[] =
   { ULA_PAGE,     "ULA SIGNALS", ula_page_init,     ula_page_gpios,     ula_output,     NEEDS_RUNNING },
   { Z80_PAGE,     "Z80 SIGNALS", z80_page_init,     z80_page_gpios,     z80_output,     NEEDS_RUNNING },
   { DBUS_PAGE,    "DATA BUS",    dbus_page_init,    dbus_page_gpios,    dbus_output,    NEEDS_RUNNING },
+  { ABUS_PAGE,    "ADDRESS BUS", abus_page_init,    abus_page_gpios,    abus_output,    NEEDS_RUNNING },
   { ROM_PAGE,     "ROM",         rom_page_init,     rom_page_gpios,     rom_output,     NEEDS_RUNNING },
 };
 #define NUM_PAGES (sizeof(page) / sizeof(DISPLAY_PAGE))
@@ -297,6 +302,29 @@ static void core1_main( void )
       dbus_page_exit();
 
       page[DBUS_PAGE].show_result = RESULT_READY;
+    }
+    break;
+
+    case ABUS_PAGE:
+    {
+      /***
+       *        _       _     _                     ___           
+       *       /_\   __| | __| | _ _  ___  ___ ___ | _ ) _  _  ___
+       *      / _ \ / _` |/ _` || '_|/ -_)(_-<(_-< | _ \| || |(_-<
+       *     /_/ \_\\__,_|\__,_||_|  \___|/__//__/ |___/ \_,_|/__/
+       *                                                          
+       */
+
+      /* Initialise the address bus tests */
+      abus_page_entry();
+
+      /* Run the address bus tests and populate the result lines for the display */
+      abus_page_run_tests();
+
+      /* Tear down address bus tests */
+      abus_page_exit();
+
+      page[ABUS_PAGE].show_result = RESULT_READY;
     }
     break;
 

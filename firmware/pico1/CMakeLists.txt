@@ -17,6 +17,7 @@ add_executable(pico1
 	page_ula.c
 	page_z80.c
 	page_dbus.c
+	page_abus.c
 	page_rom.c
 )
 
