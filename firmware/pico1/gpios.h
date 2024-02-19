@@ -9,11 +9,11 @@
 #define GPIO_OLED_SCK 17
 
 #define GPIO_INPUT1   21
-#define GPIO_INPUT2   20
 
 #define GPIO_Z80_RESET 22
 
 #define GPIO_Z80_MREQ  10
+#define GPIO_Z80_IORQ  20
 #define GPIO_Z80_RD    11
 #define GPIO_Z80_WR    12
 #define GPIO_Z80_M1    13

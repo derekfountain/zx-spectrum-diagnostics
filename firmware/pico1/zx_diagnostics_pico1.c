@@ -47,7 +47,6 @@
 #include "page_rom.h"
 
 static uint8_t input1_pressed = 0;
-static uint8_t input2_pressed = 0;
 
 /* Set of pages, press button 1 to cycle these */
 typedef enum
@@ -130,7 +129,7 @@ static uint64_t get_time_us( void )
 }
 
 /*
- * GPIO event handler callback. This manages the user input buttons, plus
+ * GPIO event handler callback. This manages the user input button, plus
  * any GPIO handling the tests require
  */
 static uint64_t debounce_timestamp_us = 0;
@@ -139,7 +138,7 @@ void gpios_callback( uint gpio, uint32_t events )
   /*
    * Switch event, set to interrupt on rising edge, so this is a click up.
    */
-  if( (gpio == GPIO_INPUT1) || (gpio == GPIO_INPUT2) )
+  if( gpio == GPIO_INPUT1 )
   {
 #define DEBOUNCE_USECS 100000
     /* Debounce pause, the switch is a bit noisy */
@@ -154,10 +153,6 @@ void gpios_callback( uint gpio, uint32_t events )
       if( gpio == GPIO_INPUT1 )
       {
 	input1_pressed = 1;
-      }
-      else if( gpio == GPIO_INPUT2 )
-      {
-	input2_pressed = 1;
       }
 
       /* Note this point as when we last actioned a switch */
@@ -190,11 +185,9 @@ static void core1_main( void )
    * Initialise the switch button GPIOs
    */
   gpio_init( GPIO_INPUT1 ); gpio_set_dir( GPIO_INPUT1, GPIO_IN ); gpio_pull_up( GPIO_INPUT1 );
-  gpio_init( GPIO_INPUT2 ); gpio_set_dir( GPIO_INPUT2, GPIO_IN ); gpio_pull_up( GPIO_INPUT2 );
 
   /* Put GPIOs callback in place so the user buttons work */
   gpio_set_irq_enabled_with_callback( GPIO_INPUT1, GPIO_IRQ_EDGE_RISE, true, &gpios_callback );
-  gpio_set_irq_enabled( GPIO_INPUT2, GPIO_IRQ_EDGE_RISE, true );
 
   /* Run all the pages' initialisation functions */
   for( uint32_t page_index = 0; page_index < NUM_PAGES; page_index++ )
