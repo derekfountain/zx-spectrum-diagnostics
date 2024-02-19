@@ -1,0 +1,16 @@
+This project forked from the original, Pico based project
+at that project's v1.1.
+
+v1.1 Second board, has the correct edge connector footprint
+===========================================================
+
+I'm only using a single input button. Remove the other, reclaim
+the GPIO.
+: To be confirmed.
+
+Missing off /IORQ was a mistake. Need to find a way to get
+that back. The button2 GPIO is the obvious option.
+
+Remove the Picos
+
+Add two PGA2040s
