@@ -1,4 +1,6 @@
 *~
 build
 pcb/zx-spectrum-diagnostics-backups/
+pcb_pga2040/zx-spectrum-diagnostics-backups/
 pcb/fp-info-cache
+pcb_pga2040/fp-info-cache

@@ -68,11 +68,11 @@ v1.1 Second board, has the correct edge connector footprint
 
 I'm only using a single input button. Remove the other, reclaim
 the GPIO.
-: To be confirmed.
+: Done on v1.2
 
-Missing off /IORQ was a mistake. Need to find a way to get
-that back. The button2 GPIO is the obvious option.
-
+Missing off /IORQ was a mistake. Use the GPIO freed up by removing
+the second user button to connect this signal to the Pico.
+: Done on v1.2
 
 
 
