@@ -74,5 +74,14 @@ Missing off /IORQ was a mistake. Use the GPIO freed up by removing
 the second user button to connect this signal to the Pico.
 : Done on v1.2
 
+The second Pico needs to collect addresses that appear on the address
+bus. To do that it needs to see the MREQ, RD and CLK lines, so it
+can tell when a valid address is ready for it to pick up.
+: Needs doing
+: On development board I've connected MREQ, RD and CLK to GPIOs
+16, 17 and 18
 
 
+
+v1.2 Third Pico based board, not sent yet
+=========================================

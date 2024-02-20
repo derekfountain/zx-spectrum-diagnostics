@@ -21,12 +21,16 @@ add_executable(pico1
 	page_rom.c
 )
 
+target_include_directories(pico1 PRIVATE ../firmware-common)
+
+pico_generate_pio_header(pico1 ../../firmware-common/picoputer.pio)
 pico_generate_pio_header(pico1 ${CMAKE_CURRENT_LIST_DIR}/clk_counter.pio)
 
 target_link_libraries(pico1
 		      pico_multicore
 		      hardware_pio
 		      pico_stdlib
+		      hardware_clocks
 		      hardware_i2c
 		      hardware_adc)
 
