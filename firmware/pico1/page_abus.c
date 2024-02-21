@@ -75,8 +75,8 @@ static int64_t __time_critical_func(abus_alarm_callback)(alarm_id_t id, void *us
   return 0;
 }
 
-#define ADDR_BUF_SIZE 64
-static uint8_t address_buffer[256];
+#define ADDR_BUF_SIZE 2048
+static uint8_t address_buffer[ADDR_BUF_SIZE*2];
 
 void abus_page_run_tests( void )
 {
@@ -89,6 +89,7 @@ void abus_page_run_tests( void )
   gpio_put( GPIO_Z80_RESET, 0 );
 
   /* Flag the other Pico, which monitors the address bus */
+  gpio_put( GPIO_P1_SIGNAL, 1 );
 
   /* Start the alarm which defines the duration of the test */
   abus_test_running = true;
@@ -98,7 +99,8 @@ void abus_page_run_tests( void )
 
   while( abus_test_running );
 
-  /* Remove flag to stop the other Pico */
+  /* Remove flag to stop the other Pico collecting address data */
+  gpio_put( GPIO_P1_SIGNAL, 0 );
 
   /*
    * Alarm is done with, this reset isn't necessary but if I change the
@@ -107,27 +109,23 @@ void abus_page_run_tests( void )
   cancel_alarm( abus_alarm_id );
 
   /* Wait for 4 byte length value from the other Pico */
+  uint32_t buffer_length;
+  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&buffer_length, sizeof(buffer_length) );
 
   /* Receive that many bytes from the other Pico */
+  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, address_buffer, buffer_length );
 
   /* Analyse the bytes and populate the result line */
+  uint32_t test_counter;
+  memcpy( (uint8_t*)&test_counter, address_buffer, sizeof(test_counter) );
+  
 
-
-
-//uint8_t data;
-//while( ui_link_receive_acked_byte( linkin_pio, linkin_sm, linkout_sm, &data ) == LINK_BYTE_NONE );
-
-  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, address_buffer, ADDR_BUF_SIZE );
-
-//  if( data == 0xDF )
-//  {
-//    num_bytes_received++;
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "%02X %02X %02X %02X %02X", address_buffer[0],
+  /* Show the result line */
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "%u %02X %02X %02X %02X", test_counter,
+	    address_buffer[0],
 	    address_buffer[1],
 	    address_buffer[2],
-	    address_buffer[3],
-	    address_buffer[4] );
-//  }
+	    address_buffer[3] );
 }
 
 

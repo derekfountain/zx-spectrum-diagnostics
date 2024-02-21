@@ -32,6 +32,7 @@
 #include "pico/platform.h"
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
+#include <string.h>
 
 #include "gpios.h"
 
@@ -76,8 +77,8 @@ static void test_blipper( void )
   gpio_put( GPIO_P2_BLIPPER, 0 );
 }
 
-#define ADDR_BUF_SIZE 64
-static uint8_t address_buffer[256];
+#define ADDR_BUF_SIZE 2048
+static uint8_t address_buffer[ADDR_BUF_SIZE*2];
 
 /*
  */
@@ -133,51 +134,41 @@ void main( void )
        offset     = pio_add_program(linkin_pio, &picoputerlinkin_program);
   picoputerlinkin_program_init(linkin_pio, linkin_sm, offset, GPIO_P2_LINKIN);
 
-uint32_t buffer_index = 0;
-for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
-  address_buffer[buffer_index] = buffer_index & 0xFF;
+  /* Test data in buffer, for now */
+  uint32_t buffer_index = 0;
+  for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
+    address_buffer[buffer_index] = buffer_index & 0xFF;
 
+  uint32_t test_counter = 0;
   while( 1 )
   {
-      sleep_ms(2000);
     /* Read the GPIO_P2_SIGNAL, wait for it to go high */
-//    while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
+    while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
 
-    /* Loop: Read the address bus, stash value */
+    gpio_put( LED_PIN, 1 );
 
-    /* Check if GPIO_P2_SIGNAL has switched off */
-    /* No? Loop back for another address bus read, yes, exit loop */
+    while( gpio_get( GPIO_P2_SIGNAL ) )
+    {
+      /* Loop: Read the address bus, stash value */
+    }
+
+    gpio_put( LED_PIN, 0 );
+
+    test_blipper();
+    uint32_t length = sizeof(test_counter);
+    ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&length, sizeof(length) );
+    test_blipper();
 
     /* Send number of bytes we have in the buffer */
 
     /* Send buffer load */
-
-    /* Back to top of loop, wait for next test run signal */
-
-
-
-
-//    while (gpio_get( GPIO_P2_SIGNAL ))
-//    {
-
-      gpio_put( LED_PIN, 1 );
-      sleep_ms(50);
-      gpio_put( LED_PIN, 0 );
-
-
-      test_blipper();
-
-//      const uint32_t data = 0xDF;
-      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, address_buffer, ADDR_BUF_SIZE );
-
-//      ui_link_send_byte( linkin_pio, linkout_sm, linkin_sm, data );
-//      pio_sm_put_blocking(pio0, linkout_sm, 0x200 | ((data ^ 0xff)<<1));
-
-      test_blipper();
+    test_blipper();
+    memcpy( address_buffer, (uint8_t*)&test_counter, sizeof(test_counter) );
+    ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, address_buffer, length );
+    test_blipper();
        
-//    }
-
-
+    /* Back to top of loop, wait for next test run signal */
+    test_counter++;
   }
 
 }
