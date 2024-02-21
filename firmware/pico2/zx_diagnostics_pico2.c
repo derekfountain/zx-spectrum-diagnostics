@@ -89,16 +89,42 @@ void main( void )
   gpio_init(LED_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
 
-  /* Outbound link, to IO Pico */
-  gpio_set_function(LINKOUT_PIN, GPIO_FUNC_PIO0);
+  const enum gpio_function linkout_function = GPIO_FUNC_PIO0;
+  const PIO                linkout_pio      = pio0;
+  const enum gpio_function linkin_function  = GPIO_FUNC_PIO0;
+  const PIO                linkin_pio       = pio0;
 
-  int  linkout_sm      = pio_claim_unused_sm(pio0, true);
-  uint offset     = pio_add_program(pio0, &picoputerlinkout_program);
-  picoputerlinkout_program_init(pio0, linkout_sm, offset, LINKOUT_PIN);
+  /* Outbound link, to Pico1 */
+  gpio_set_function(GPIO_P2_LINKOUT, linkout_function);
+
+  int  linkout_sm = pio_claim_unused_sm(linkout_pio, true);
+  uint offset     = pio_add_program(linkout_pio, &picoputerlinkout_program);
+  picoputerlinkout_program_init(linkout_pio, linkout_sm, offset, GPIO_P2_LINKOUT);
+
+  /* Inbound link, from Pico1 */
+  gpio_set_function(GPIO_P2_LINKIN, linkin_function);
+
+  int  linkin_sm  = pio_claim_unused_sm(linkin_pio, true);
+       offset     = pio_add_program(linkin_pio, &picoputerlinkin_program);
+  picoputerlinkin_program_init(linkin_pio, linkin_sm, offset, GPIO_P2_LINKIN);
 
   while( 1 )
   {
     /* Read the GPIO_P2_SIGNAL, wait for it to go high */
+
+    /* Loop: Read the address bus, stash value */
+
+    /* Check if GPIO_P2_SIGNAL has switched off */
+    /* No, loop back for another address bus read, yes, exit loop */
+
+    /* Send number of bytes we have in the buffer */
+
+    /* Send buffer load */
+
+    /* Back to top of loop, wait for next test run signal */
+
+
+
 //    while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
 
 //    while (gpio_get( GPIO_P2_SIGNAL ))
@@ -112,7 +138,8 @@ void main( void )
 
       test_blipper();
       const uint32_t data = 0xDF;
-      pio_sm_put_blocking(pio0, linkout_sm, 0x200 | ((data ^ 0xff)<<1));
+      ui_link_send_byte( linkin_pio, linkout_sm, linkin_sm, data );
+//      pio_sm_put_blocking(pio0, linkout_sm, 0x200 | ((data ^ 0xff)<<1));
       test_blipper();
        
 //    }

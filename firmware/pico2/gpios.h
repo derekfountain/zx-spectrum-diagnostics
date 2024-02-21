@@ -1,8 +1,11 @@
+/* GPIOs for Pico2, the one with the address bus */
+
 #ifndef __GPIOS_H
 #define GPIOS_H
 
 /* These need to match the hardware design */
 
+/* Test signal to scope */
 #define GPIO_P2_BLIPPER   19
 
 #define GPIO_ABUS_A0       0
@@ -23,6 +26,11 @@
 #define GPIO_ABUS_A15     15
 
 #define GPIO_P2_SIGNAL    20
+
+/* Pico2 to Pico1 serial data link pin, output from Pico2 */
 #define GPIO_P2_LINKOUT   22
+
+/* Pico2 to Pico1 serial data link pin, input to Pico2 */
+#define GPIO_P2_LINKIN   21
 
 #endif

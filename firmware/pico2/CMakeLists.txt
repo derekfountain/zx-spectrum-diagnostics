@@ -9,7 +9,8 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 add_executable(pico2
-	zx_diagnostics_pico2.c
+	       zx_diagnostics_pico2.c
+	       ../firmware-common/link_common.c
 )
 
 target_include_directories(pico2 PRIVATE ../firmware-common)

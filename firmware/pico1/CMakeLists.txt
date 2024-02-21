@@ -19,6 +19,7 @@ add_executable(pico1
 	page_dbus.c
 	page_abus.c
 	page_rom.c
+	../firmware-common/link_common.c
 )
 
 target_include_directories(pico1 PRIVATE ../firmware-common)
