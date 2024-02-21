@@ -38,8 +38,6 @@
 #include "link_common.h"
 #include "picoputer.pio.h"
 
-#define LINKOUT_PIN 22
-
 static void test_blipper( void )
 {
   gpio_put( GPIO_P2_BLIPPER, 1 );
@@ -51,8 +49,35 @@ static void test_blipper( void )
   __asm volatile ("nop");
   __asm volatile ("nop");
   __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
+  __asm volatile ("nop");
   gpio_put( GPIO_P2_BLIPPER, 0 );
 }
+
+#define ADDR_BUF_SIZE 64
+static uint8_t address_buffer[256];
 
 /*
  */
@@ -108,14 +133,20 @@ void main( void )
        offset     = pio_add_program(linkin_pio, &picoputerlinkin_program);
   picoputerlinkin_program_init(linkin_pio, linkin_sm, offset, GPIO_P2_LINKIN);
 
+uint32_t buffer_index = 0;
+for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
+  address_buffer[buffer_index] = buffer_index & 0xFF;
+
   while( 1 )
   {
+      sleep_ms(2000);
     /* Read the GPIO_P2_SIGNAL, wait for it to go high */
+//    while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
 
     /* Loop: Read the address bus, stash value */
 
     /* Check if GPIO_P2_SIGNAL has switched off */
-    /* No, loop back for another address bus read, yes, exit loop */
+    /* No? Loop back for another address bus read, yes, exit loop */
 
     /* Send number of bytes we have in the buffer */
 
@@ -125,11 +156,9 @@ void main( void )
 
 
 
-//    while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
 
 //    while (gpio_get( GPIO_P2_SIGNAL ))
 //    {
-      sleep_ms(1000);
 
       gpio_put( LED_PIN, 1 );
       sleep_ms(50);
@@ -137,9 +166,13 @@ void main( void )
 
 
       test_blipper();
-      const uint32_t data = 0xDF;
-      ui_link_send_byte( linkin_pio, linkout_sm, linkin_sm, data );
+
+//      const uint32_t data = 0xDF;
+      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, address_buffer, ADDR_BUF_SIZE );
+
+//      ui_link_send_byte( linkin_pio, linkout_sm, linkin_sm, data );
 //      pio_sm_put_blocking(pio0, linkout_sm, 0x200 | ((data ^ 0xff)<<1));
+
       test_blipper();
        
 //    }

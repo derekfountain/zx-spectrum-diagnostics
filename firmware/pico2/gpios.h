@@ -31,6 +31,6 @@
 #define GPIO_P2_LINKOUT   22
 
 /* Pico2 to Pico1 serial data link pin, input to Pico2 */
-#define GPIO_P2_LINKIN   21
+#define GPIO_P2_LINKIN    21
 
 #endif

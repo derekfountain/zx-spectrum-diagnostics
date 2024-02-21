@@ -75,6 +75,9 @@ static int64_t __time_critical_func(abus_alarm_callback)(alarm_id_t id, void *us
   return 0;
 }
 
+#define ADDR_BUF_SIZE 64
+static uint8_t address_buffer[256];
+
 void abus_page_run_tests( void )
 {
   abus_test_running = false;
@@ -111,33 +114,20 @@ void abus_page_run_tests( void )
 
 
 
-uint8_t data;
-while( ui_link_receive_acked_byte( linkin_pio, linkin_sm, linkout_sm, &data ) == LINK_BYTE_NONE );
+//uint8_t data;
+//while( ui_link_receive_acked_byte( linkin_pio, linkin_sm, linkout_sm, &data ) == LINK_BYTE_NONE );
 
+  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, address_buffer, ADDR_BUF_SIZE );
 
-#if 0
-  /* Read from PIO input FIFO */
-  uint32_t data;
-  while( ! picoputerlinkin_get(linkin_pio, linkin_sm, &data) );
-
-  /* Invert what's been received */
-  data = data ^ 0xFFFFFFFF;
-
-  /* It arrives from the PIO at the top end of the word, so shift down */
-  data >>= 22;
-      
-  /* Remove stop bit in LSB */
-  data >>= 1;
-	  
-  /* Mask out data, just to be sure */
-  data &= 0xff;
-#endif
-
-  if( data == 0xDF )
-  {
-    num_bytes_received++;
-    snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "abus: %d", num_bytes_received );
-  }
+//  if( data == 0xDF )
+//  {
+//    num_bytes_received++;
+  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "%02X %02X %02X %02X %02X", address_buffer[0],
+	    address_buffer[1],
+	    address_buffer[2],
+	    address_buffer[3],
+	    address_buffer[4] );
+//  }
 }
 
 
