@@ -77,9 +77,10 @@ the second user button to connect this signal to the Pico.
 The second Pico needs to collect addresses that appear on the address
 bus. To do that it needs to see the MREQ, RD and CLK lines, so it
 can tell when a valid address is ready for it to pick up.
-: Needs doing
+: Done on v1.2
 : On development board I've connected MREQ, RD and CLK to GPIOs
-16, 17 and 18
+16, 17 and 18. Matches the modification to the schematic and PCB
+layout for v1,2.
 
 
 

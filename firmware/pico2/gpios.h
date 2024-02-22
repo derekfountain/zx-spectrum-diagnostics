@@ -25,6 +25,12 @@
 #define GPIO_ABUS_A14     14
 #define GPIO_ABUS_A15     15
 
+#define GPIO_Z80_MREQ     16
+#define GPIO_Z80_RD       17
+#define GPIO_Z80_CLK      18
+
+
+
 #define GPIO_P2_SIGNAL    20
 
 /* Pico2 to Pico1 serial data link pin, output from Pico2 */

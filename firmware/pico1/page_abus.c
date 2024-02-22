@@ -21,6 +21,9 @@
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_ABUS_TEST_RESULT_LINES][WIDTH_OLED_CHARS+1];
 
+#define PICO_COMM_TEST_ABUS 0x01
+#define PICO_COMM_TEST_ROM  0x02
+
 /* Inbound link, from second pico which does the address bus stuff */
 static       int                linkin_sm;
 static const PIO                linkin_pio      = pio1;
@@ -57,12 +60,10 @@ void abus_page_init( void )
 
 void abus_page_entry( void )
 {
-gpio_put( GPIO_P1_SIGNAL, 1 );
 }
 
 void abus_page_exit( void )
 {
-gpio_put( GPIO_P1_SIGNAL, 0 );
 }
 
 void abus_page_gpios( uint32_t gpio, uint32_t events )
@@ -90,6 +91,10 @@ void abus_page_run_tests( void )
 
   /* Flag the other Pico, which monitors the address bus */
   gpio_put( GPIO_P1_SIGNAL, 1 );
+
+  /* Tell the other Pico which test to run */
+  uint32_t test_type = PICO_COMM_TEST_ABUS;
+  ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&test_type, sizeof(test_type) );
 
   /* Start the alarm which defines the duration of the test */
   abus_test_running = true;

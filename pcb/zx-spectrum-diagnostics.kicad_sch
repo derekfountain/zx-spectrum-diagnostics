@@ -6,7 +6,8 @@
 
   (title_block
     (title "ZX Spectrum Diagnostics Board")
-    (date "2023-10-29")
+    (date "2024-02-22")
+    (rev "v1.2")
   )
 
   (lib_symbols
@@ -1062,6 +1063,7 @@
       )
     )
   )
+
 
   (junction (at 67.818 37.592) (diameter 0) (color 0 0 0 0)
     (uuid 110b8342-d882-4a91-9b29-b063ec3a576d)

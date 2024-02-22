@@ -39,6 +39,9 @@
 #include "link_common.h"
 #include "picoputer.pio.h"
 
+#define PICO_COMM_TEST_ABUS 0x01
+#define PICO_COMM_TEST_ROM  0x02
+
 static void test_blipper( void )
 {
   gpio_put( GPIO_P2_BLIPPER, 1 );
@@ -78,7 +81,7 @@ static void test_blipper( void )
 }
 
 #define ADDR_BUF_SIZE 2048
-static uint8_t address_buffer[ADDR_BUF_SIZE*2];
+static uint16_t address_buffer[ADDR_BUF_SIZE*2];
 
 /*
  */
@@ -134,10 +137,6 @@ void main( void )
        offset     = pio_add_program(linkin_pio, &picoputerlinkin_program);
   picoputerlinkin_program_init(linkin_pio, linkin_sm, offset, GPIO_P2_LINKIN);
 
-  /* Test data in buffer, for now */
-  uint32_t buffer_index = 0;
-  for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
-    address_buffer[buffer_index] = buffer_index & 0xFF;
 
   uint32_t test_counter = 0;
   while( 1 )
@@ -147,25 +146,109 @@ void main( void )
 
     gpio_put( LED_PIN, 1 );
 
-    while( gpio_get( GPIO_P2_SIGNAL ) )
+    /* Wait for test type from the other Pico */
+    uint32_t test_type;
+    ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&test_type, sizeof(test_type) );
+
+    switch( test_type )
     {
-      /* Loop: Read the address bus, stash value */
+    case PICO_COMM_TEST_ABUS:
+    {
+      /* Clear buffer */
+      uint32_t buffer_index = 0;
+      for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
+	address_buffer[buffer_index] = 0;
+
+      buffer_index = 0;
+
+      /* Loop while the first Pico is holding the "test running" signal */
+      while( gpio_get( GPIO_P2_SIGNAL ) )
+      {
+	/* Wait for a memory request to start */
+	if( gpio_get( GPIO_Z80_MREQ ) == 0 )
+	{
+
+	  /* Wait for a read to start, as opposed to a write */
+	  if( gpio_get( GPIO_Z80_RD ) == 0 )
+	  {
+	    /* OK, a Z80 memory read has begun, the address is already on the address bus */
+	    uint16_t address_bus = gpio_get_all() & 0xFFFF;
+
+	    /*
+	     * FIXME This collects the addresses the Z80 puts on the address bus.
+	     * Or at least, those that appear on the address bus. It shows a restarting
+	     * pattern, like this:
+(gdb) x/1024xh address_buffer
+0x20000674 <address_buffer+608>:        0x0000  0x0000  0x0001  0x0002  0x0003  0x0004  0x0005  0x0006
+0x20000684 <address_buffer+624>:        0x0007  0x11cb  0x11cc  0x11cd  0x11ce  0x11cf  0x0000  0x0000
+0x20000694 <address_buffer+640>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006a4 <address_buffer+656>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006b4 <address_buffer+672>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006c4 <address_buffer+688>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006d4 <address_buffer+704>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006e4 <address_buffer+720>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006f4 <address_buffer+736>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000704 <address_buffer+752>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000714 <address_buffer+768>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000724 <address_buffer+784>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000734 <address_buffer+800>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000744 <address_buffer+816>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000754 <address_buffer+832>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000764 <address_buffer+848>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000774 <address_buffer+864>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000784 <address_buffer+880>:        0x0001  0x0002  0x0003  0x0004  0x0005  0x0006  0x0007  0x11cb
+0x20000794 <address_buffer+896>:        0x11cc  0x11cd  0x11ce  0x11cf  0x11d0  0x11d1  0x11d2  0x11d3
+0x200007a4 <address_buffer+912>:        0x11d4  0x11d5  0x11d6  0x11d7  0x11d8  0x11d9  0x11da  0x11db
+0x200007b4 <address_buffer+928>:        0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd
+0x200007c4 <address_buffer+944>:        0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df
+0x200007d4 <address_buffer+960>:        0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1
+0x200007e4 <address_buffer+976>:        0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd
+0x200007f4 <address_buffer+992>:        0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df
+0x20000804 <address_buffer+1008>:       0x11e0  0x11e1  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000814 <address_buffer+1024>:       0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0001
+0x20000824 <address_buffer+1040>:       0x0002  0x0003  0x0004  0x0005  0x0006  0x0007  0x11cb  0x11cc
+0x20000834 <address_buffer+1056>:       0x11cd  0x11ce  0x11cf  0x11d0  0x11d1  0x11d2  0x11d3  0x11d4
+0x20000844 <address_buffer+1072>:       0x11d5  0x11d6  0x11d7  0x11d8  0x11d9  0x11da  0x11db  0x11dc
+0x20000854 <address_buffer+1088>:       0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de
+
+So it runs addresses 0, 1, 2, etc, up to 0x11cf in the frist case, then starts again. I saw exactly this
+when I was doing the ROM emulator. Lots of zeroes appear, then it starts again, getting a bit further.
+A few more zeroes, then it starts again. Eventually, after 3 or 4 iterations, it keeps going and the 
+ROM program runs. I don't know why the Z80/Spectrum does this, but it appears consistent.
+	     */
+
+	    /* Read the address bus, stash value while there's room in the buffer */
+	    address_buffer[buffer_index++] = address_bus;
+	    if( buffer_index == ADDR_BUF_SIZE )
+	      break;
+
+	    /* Wait for the Z80 complete the memory request */
+	    while( gpio_get( GPIO_Z80_MREQ ) == 0 );
+	  }
+	  
+	}
+
+
+      }
+    }
+    break;
+
+    default:
+      break;
     }
 
     gpio_put( LED_PIN, 0 );
 
-    test_blipper();
+    /* Send response, whatever that is */
+    /* Test data starts with a 32 bit number, which is the length of what follows */
     uint32_t length = sizeof(test_counter);
     ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&length, sizeof(length) );
-    test_blipper();
 
     /* Send number of bytes we have in the buffer */
 
     /* Send buffer load */
-    test_blipper();
     memcpy( address_buffer, (uint8_t*)&test_counter, sizeof(test_counter) );
-    ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, address_buffer, length );
-    test_blipper();
+    ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)address_buffer, length );
        
     /* Back to top of loop, wait for next test run signal */
     test_counter++;
