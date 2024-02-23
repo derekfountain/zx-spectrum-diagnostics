@@ -5,6 +5,7 @@
 #include "oled.h"
 #include "page.h"
 #include "gpios.h"
+#include "test_data.h"
 
 #include "pico/stdlib.h"
 #include <stdio.h>
@@ -18,14 +19,19 @@
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_DBUS_TEST_RESULT_LINES][WIDTH_OLED_CHARS+1];
 
-static SEEN_EDGE d0_flag   = SEEN_NEITHER;
-static SEEN_EDGE d1_flag   = SEEN_NEITHER;
-static SEEN_EDGE d2_flag   = SEEN_NEITHER;
-static SEEN_EDGE d3_flag   = SEEN_NEITHER;
-static SEEN_EDGE d4_flag   = SEEN_NEITHER;
-static SEEN_EDGE d5_flag   = SEEN_NEITHER;
-static SEEN_EDGE d6_flag   = SEEN_NEITHER;
-static SEEN_EDGE d7_flag   = SEEN_NEITHER;
+#define NUM_DBUS_LINES 8
+
+static EDGE_STATUS bus_status[NUM_DBUS_LINES ] =
+{
+  {SEEN_NEITHER, GPIO_DBUS_D0},
+  {SEEN_NEITHER, GPIO_DBUS_D1},
+  {SEEN_NEITHER, GPIO_DBUS_D2},
+  {SEEN_NEITHER, GPIO_DBUS_D3},
+  {SEEN_NEITHER, GPIO_DBUS_D4},
+  {SEEN_NEITHER, GPIO_DBUS_D5},
+  {SEEN_NEITHER, GPIO_DBUS_D6},
+  {SEEN_NEITHER, GPIO_DBUS_D7},
+};
 
 static bool dbus_test_running = false;
 
@@ -38,14 +44,12 @@ static int64_t __time_critical_func(dbus_alarm_callback)(alarm_id_t id, void *us
 void dbus_page_init( void )
 {
   /* Set up the data bus sampling GPIOs */
-  gpio_init( GPIO_DBUS_D0 );   gpio_set_dir( GPIO_DBUS_D0, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D0 );
-  gpio_init( GPIO_DBUS_D1 );   gpio_set_dir( GPIO_DBUS_D1, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D1 );
-  gpio_init( GPIO_DBUS_D2 );   gpio_set_dir( GPIO_DBUS_D2, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D2 );
-  gpio_init( GPIO_DBUS_D3 );   gpio_set_dir( GPIO_DBUS_D3, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D3 );
-  gpio_init( GPIO_DBUS_D4 );   gpio_set_dir( GPIO_DBUS_D4, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D4 );
-  gpio_init( GPIO_DBUS_D5 );   gpio_set_dir( GPIO_DBUS_D5, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D5 );
-  gpio_init( GPIO_DBUS_D6 );   gpio_set_dir( GPIO_DBUS_D6, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D6 );
-  gpio_init( GPIO_DBUS_D7 );   gpio_set_dir( GPIO_DBUS_D7, GPIO_IN ); gpio_pull_up( GPIO_DBUS_D7 );
+  for( uint32_t bus_index=0; bus_index<NUM_DBUS_LINES; bus_index++ )
+  {
+    gpio_init( bus_status[bus_index].gpio );
+    gpio_set_dir( bus_status[bus_index].gpio, GPIO_IN );
+    gpio_pull_up( bus_status[bus_index].gpio );
+  }
 }
 
 void dbus_page_entry( void )
@@ -53,46 +57,29 @@ void dbus_page_entry( void )
   /* Need to hold the Z80 offline while I set these up or they fire too early */
   gpio_put( GPIO_Z80_RESET, 1 ); sleep_ms( 650 );
 
-  d0_flag = SEEN_NEITHER;
-  d1_flag = SEEN_NEITHER;
-  d2_flag = SEEN_NEITHER;
-  d3_flag = SEEN_NEITHER;
-  d4_flag = SEEN_NEITHER;
-  d5_flag = SEEN_NEITHER;
-  d6_flag = SEEN_NEITHER;
-  d7_flag = SEEN_NEITHER;
-
-  gpio_set_irq_enabled( GPIO_DBUS_D0, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D1, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D2, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D3, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D4, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D5, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D6, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
-  gpio_set_irq_enabled( GPIO_DBUS_D7, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
+  for( uint32_t bus_index=0; bus_index<NUM_DBUS_LINES; bus_index++ )
+  {
+    gpio_set_irq_enabled( bus_status[bus_index].gpio, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, true );
+  }
 }
 
 void dbus_page_exit( void )
 {
-  gpio_set_irq_enabled( GPIO_DBUS_D0, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D1, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D2, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D3, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D4, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D5, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D6, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
-  gpio_set_irq_enabled( GPIO_DBUS_D7, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+  for( uint32_t bus_index=0; bus_index<NUM_DBUS_LINES; bus_index++ )
+  {
+    gpio_set_irq_enabled( bus_status[bus_index].gpio, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+  }
 
   snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "        76543210" );
   snprintf( result_line_txt[1], WIDTH_OLED_CHARS, "        --------" );
-  if( (d0_flag == SEEN_BOTH) &&
-      (d1_flag == SEEN_BOTH) &&
-      (d2_flag == SEEN_BOTH) &&
-      (d3_flag == SEEN_BOTH) &&
-      (d4_flag == SEEN_BOTH) &&
-      (d5_flag == SEEN_BOTH) &&
-      (d6_flag == SEEN_BOTH) &&
-      (d7_flag == SEEN_BOTH) )
+  if( (bus_status[0].flag == SEEN_BOTH) &&
+      (bus_status[1].flag == SEEN_BOTH) &&
+      (bus_status[2].flag == SEEN_BOTH) &&
+      (bus_status[3].flag == SEEN_BOTH) &&
+      (bus_status[4].flag == SEEN_BOTH) &&
+      (bus_status[5].flag == SEEN_BOTH) &&
+      (bus_status[6].flag == SEEN_BOTH) &&
+      (bus_status[7].flag == SEEN_BOTH) )
   {
     /* This would be the norm: transitions low to high and high to low have both been seen */
     snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "Active: YYYYYYYY");
@@ -114,14 +101,14 @@ void dbus_page_exit( void )
      * high or low.
      */
     snprintf( result_line_txt[2], WIDTH_OLED_CHARS, " Stuck: %c%c%c%c%c%c%c%c",
-	      d7_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D7 ) ? 'H' : 'L',
-	      d6_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D6 ) ? 'H' : 'L',
-	      d5_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D5 ) ? 'H' : 'L',
-	      d4_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D4 ) ? 'H' : 'L',
-	      d3_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D3 ) ? 'H' : 'L',
-	      d2_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D2 ) ? 'H' : 'L',
-	      d1_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D1 ) ? 'H' : 'L',
-	      d0_flag == SEEN_BOTH ? '.' : gpio_get( GPIO_DBUS_D0 ) ? 'H' : 'L');
+	      bus_status[7].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[7].gpio ) ? 'H' : 'L',
+	      bus_status[6].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[6].gpio ) ? 'H' : 'L',
+	      bus_status[5].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[5].gpio ) ? 'H' : 'L',
+	      bus_status[4].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[4].gpio ) ? 'H' : 'L',
+	      bus_status[3].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[3].gpio ) ? 'H' : 'L',
+	      bus_status[2].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[2].gpio ) ? 'H' : 'L',
+	      bus_status[1].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[1].gpio ) ? 'H' : 'L',
+	      bus_status[0].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[0].gpio ) ? 'H' : 'L');
   }
 }
 
@@ -131,53 +118,26 @@ void dbus_page_gpios( uint32_t gpio, uint32_t events )
   {
     if( (gpio >= GPIO_DBUS_D0) && (gpio <= GPIO_DBUS_D7) )
     {
+      uint line_index = gpio - GPIO_DBUS_D0;
+ 
       /*
        * One of the data bus GPIOs has changed state. Note whether it was
        * rising or falling. If it's been seen doing both, it behaviour is
        * confirmed as correct and the GPIO callback is switched off.
        */
-      SEEN_EDGE *d_flag_ptr=NULL;
-
-      switch( gpio )
-      {
-      case GPIO_DBUS_D0:
-	d_flag_ptr = &d0_flag;
-	break;
-      case GPIO_DBUS_D1:
-	d_flag_ptr = &d1_flag;
-	break;
-      case GPIO_DBUS_D2:
-	d_flag_ptr = &d2_flag;
-	break;
-      case GPIO_DBUS_D3:
-	d_flag_ptr = &d3_flag;
-	break;
-      case GPIO_DBUS_D4:
-	d_flag_ptr = &d4_flag;
-	break;
-      case GPIO_DBUS_D5:
-	d_flag_ptr = &d5_flag;
-	break;
-      case GPIO_DBUS_D6:
-	d_flag_ptr = &d6_flag;
-	break;
-      case GPIO_DBUS_D7:
-	d_flag_ptr = &d7_flag;
-	break;
-      }
 
       if( events | GPIO_IRQ_EDGE_FALL )
       {
-	*d_flag_ptr |= SEEN_FALLING;
+	bus_status[line_index].flag |= SEEN_FALLING;
       }
       if( events | GPIO_IRQ_EDGE_RISE )
       {
-	*d_flag_ptr |= SEEN_RISING;
+	bus_status[line_index].flag |= SEEN_RISING;
       }
 
-      if( *d_flag_ptr == SEEN_BOTH )
+      if( bus_status[line_index].flag == SEEN_BOTH )
       {
-	gpio_set_irq_enabled( gpio, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
+	gpio_set_irq_enabled( bus_status[line_index].gpio, GPIO_IRQ_EDGE_FALL|GPIO_IRQ_EDGE_RISE, false );
       }
     }
     else

@@ -17,6 +17,8 @@ target_include_directories(pico2 PRIVATE ../firmware-common)
 
 pico_generate_pio_header(pico2 ../../firmware-common/picoputer.pio)
 
+target_include_directories(pico2 PRIVATE ../firmware-common)
+
 target_link_libraries(pico2
 		      pico_stdlib
 		      hardware_pio

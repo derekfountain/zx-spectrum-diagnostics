@@ -5,6 +5,7 @@
 #include "oled.h"
 #include "page.h"
 #include "gpios.h"
+#include "test_data.h"
 
 #include "pico/stdlib.h"
 #include <stdio.h>
