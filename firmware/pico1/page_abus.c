@@ -18,7 +18,7 @@
 #define TEST_TIME_SECS   2
 #define TEST_TIME_SECS_F ((float)(TEST_TIME_SECS))
 
-#define NUM_ABUS_TEST_RESULT_LINES 4
+#define NUM_ABUS_TEST_RESULT_LINES 6
 #define WIDTH_OLED_CHARS 32
 static uint8_t result_line_txt[NUM_ABUS_TEST_RESULT_LINES][WIDTH_OLED_CHARS+1];
 
@@ -82,9 +82,12 @@ static uint8_t address_buffer[ADDR_BUF_SIZE*2];
 
 void abus_page_run_tests( void )
 {
-const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-gpio_init(LED_PIN);
-gpio_set_dir(LED_PIN, GPIO_OUT);
+#if 0
+  /* LED can be useful for this one */
+  const uint LED_PIN = PICO_DEFAULT_LED_PIN;
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
+#endif
 
   abus_test_running = false;
 
@@ -100,7 +103,7 @@ gpio_set_dir(LED_PIN, GPIO_OUT);
 
   /* Flag the other Pico, which monitors the address bus */
   gpio_put( GPIO_P1_SIGNAL, 1 );
-gpio_put(LED_PIN, 1);
+  // gpio_put(LED_PIN, 1);
 
   /* Start the alarm which defines the duration of the test */
   abus_test_running = true;
@@ -112,7 +115,7 @@ gpio_put(LED_PIN, 1);
 
   /* Remove flag to stop the other Pico collecting address data */
   gpio_put( GPIO_P1_SIGNAL, 0 );
-gpio_put(LED_PIN, 0);
+  //gpio_put(LED_PIN, 0);
 
   /*
    * Alarm is done with, this reset isn't necessary but if I change the
@@ -120,14 +123,11 @@ gpio_put(LED_PIN, 0);
    */
   cancel_alarm( abus_alarm_id );
 
-  /* Wait for 4 byte length value from the other Pico */
-  uint32_t buffer_length;
-  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&buffer_length, sizeof(buffer_length) );
-
-  /* Receive that many bytes from the other Pico */
+  /* Wait for 16 byte results array from the other Pico */
   SEEN_EDGE line_edge[16];
-  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)line_edge, 16 );
+  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)line_edge, sizeof(line_edge[0])*16 );
 
+  /* Now receive the raw state of the Pico2 GPIOs, so I can report what's stuck, if anything */
   uint32_t gpio_state;
   ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&gpio_state, sizeof(gpio_state) );
 
@@ -152,8 +152,10 @@ gpio_put(LED_PIN, 0);
       (line_edge[ 1] == SEEN_BOTH) &&
       (line_edge[ 0] == SEEN_BOTH) )
   {
-    /* This would be the norm: transitions low to high and high to low have both been seen */
+    /* This would be the norm: transitions low to high and high to low have all been seen */
     snprintf( result_line_txt[3], WIDTH_OLED_CHARS, "YYYYYYYYYYYYYYYY");
+    result_line_txt[4][0] = '\0';
+    snprintf( result_line_txt[5], WIDTH_OLED_CHARS, "All active");
   }
   else
   {
@@ -189,13 +191,15 @@ gpio_put(LED_PIN, 0);
 	      line_edge[ 1] == SEEN_BOTH ? '.' : gpio_state & (1<< 1) ? 'H' : 'L',
 	      line_edge[ 0] == SEEN_BOTH ? '.' : gpio_state & (1<< 0) ? 'H' : 'L'
       );
-
+    result_line_txt[4][0] = '\0';
+    snprintf( result_line_txt[5], WIDTH_OLED_CHARS, "Stuck lines");
   }
 
-sleep_ms(1000);
-//  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, "",
-//	    line_edge[15].flag == SEEN_BOTH ? '.' : gpio_get( bus_status[7].gpio ) ? 'H' : 'L',
-// );
+  /*
+   * Repeat test a regular intervals, but don't do it too fast in case the comms
+   * goes a bit funny. No reason it should, but let's not tempt it
+   */
+  sleep_ms(1000);
 }
 
 

@@ -145,7 +145,6 @@ void main( void )
   uint32_t test_counter = 0;
   while( 1 )
   {
-gpio_put( LED_PIN, 0 );
     /* Wait for test type from the other Pico */
     uint32_t test_type = PICO_COMM_TEST_ABUS;
     ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&test_type, sizeof(test_type) );
@@ -156,38 +155,191 @@ gpio_put( LED_PIN, 0 );
     {
     /* Read the GPIO_P2_SIGNAL, wait for it to go high */
       while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
-gpio_put( LED_PIN, 1 );
     
       /*
        * Address bus test, just monitor the address lines and confirm they got low->high and high->low
        * Loop while the first Pico is holding the "test running" signal
        */
-//      SEEN_EDGE line_edge[16] =	{ SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, 
-      //			  SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, 
-      //			  SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, 
-      //			  SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER };
-      SEEN_EDGE line_edge[16] =	{ SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, 
-				  SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, 
-				  SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, 
-				  SEEN_BOTH, SEEN_BOTH, SEEN_BOTH, SEEN_BOTH };
-//      while( gpio_get( GPIO_P2_SIGNAL ) == 1 )
-      //    {
-      sleep_ms(100);
-      //}
+      SEEN_EDGE line_edge[16] =	{ SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, 
+				  SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, 
+				  SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, 
+				  SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER, SEEN_NEITHER };
+      
+      uint32_t previous_gpios_state = gpio_get_all() & 0x0000FFFF;
 
-      /* Send response */
+      while( gpio_get( GPIO_P2_SIGNAL ) == 1 )
+      {
+	/*
+	 * Each iteration I loop over the 16 address lines looking for transitions.
+	 * Previous GPIO state is taken at the very start. When a bit is seen going
+	 * high to low, or low to high, the output array entry is updated and the
+	 * previous bit store is updated.
+	 * 
+	 * SEEN_FALLING | SEEN_RISING = SEEN_BOTH
+	 *
+	 * (Imagine one bit: it starts at 0. I read it's state, it hasn't changed.
+	 * Just keep looping until it changes to 1. It's seen rising. It's 
+	 * previous-state is then set 1, and I loop. I read it's state again,
+	 * this time with a previous-state of 1, so I'm now looking for a transition
+	 * to 0. When I see that, it's been seen falling. Repeat for each of the
+	 * 16 address lines.)
+	 * 
+	 * When all bits are at SEEN_BOTH, which would be the typical case with a
+	 * healthy Spectrum, the test is complete. But I have nothing else to do
+	 * do I keep looping.
+	 */
 
-      /* Test data starts with a 32 bit number, which is the length of what follows */
-// This length is redundant
-      uint32_t length = sizeof(line_edge)*sizeof(line_edge[0]) + sizeof(uint32_t);
-      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&length, sizeof(length) );
+	uint32_t current_gpios_state = gpio_get_all();
 
-      /* Send buffer load */
+	/* Work along the address bus lines */
+	for( uint32_t gpio_index = 0; gpio_index < 16; gpio_index++ )
+	{
+	  uint32_t mask = (1 << gpio_index);
+
+	  uint32_t current_gpio_state  = current_gpios_state & mask;
+	  
+	  if( previous_gpios_state & mask )
+	  {
+	    /* This GPIO was previously set */
+
+	    if( current_gpio_state )
+	    {
+	      /* It was set, it's still set, NOP */
+	    }
+	    else
+	    {
+	      /* It was set, it's now not set, it's gone high to low */
+	      line_edge[gpio_index] |= SEEN_FALLING;
+
+	      /* Clear the bit in the previous state, it's now unset */
+	      previous_gpios_state &= ~mask;
+	    }
+	  }
+	  else
+	  {
+	    /* This GPIO was previously unset */
+
+	    if(! current_gpio_state )
+	    {
+	      /* It was unset, it's still unset, NOP */
+	    }
+	    else
+	    {
+	      /* It was unset, it's now set, it's gone low to high */
+	      line_edge[gpio_index] |= SEEN_RISING;
+
+	      /* Set the bit in the previous state, it's now set */
+	      previous_gpios_state |= mask;
+	    }
+	  }
+
+	} /* End for 16 address lines */     
+
+      } /* End while P2 signal is held by Pico1 */
+
+      /* Send response  - send buffer load */
       ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)line_edge, sizeof(line_edge)*sizeof(line_edge[0]) );
 
-      /* Send GPIO state so other Pico can see what lines are stuck, if any */
+      /* Send 32-bit raw GPIO state so other Pico can see what lines are stuck, if any */
       uint32_t gpio_state = gpio_get_all();
-      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&gpio_state, sizeof(uint32_t) );
+      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&gpio_state, sizeof(gpio_state) );
+    }
+    break;
+
+    case PICO_COMM_TEST_ROM:
+    {
+#if 0
+      /* Clear buffer */
+      uint32_t buffer_index = 0;
+      for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
+	address_buffer[buffer_index] = 0;
+
+      buffer_index = 0;
+
+      /* Loop while the first Pico is holding the "test running" signal */
+      while( gpio_get( GPIO_P2_SIGNAL ) )
+      {
+	/* Wait for a memory request to start */
+	if( gpio_get( GPIO_Z80_MREQ ) == 0 )
+	{
+
+	  /* Wait for a read to start, as opposed to a write */
+	  if( gpio_get( GPIO_Z80_RD ) == 0 )
+	  {
+	    /* OK, a Z80 memory read has begun, the address is already on the address bus */
+	    uint16_t address_bus = gpio_get_all() & 0xFFFF;
+
+	    /*
+	     * FIXME This collects the addresses the Z80 puts on the address bus.
+	     * Or at least, those that appear on the address bus. It shows a restarting
+	     * pattern, like this:
+(gdb) x/1024xh address_buffer
+0x20000674 <address_buffer+608>:        0x0000  0x0000  0x0001  0x0002  0x0003  0x0004  0x0005  0x0006
+0x20000684 <address_buffer+624>:        0x0007  0x11cb  0x11cc  0x11cd  0x11ce  0x11cf  0x0000  0x0000
+0x20000694 <address_buffer+640>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006a4 <address_buffer+656>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006b4 <address_buffer+672>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006c4 <address_buffer+688>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006d4 <address_buffer+704>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006e4 <address_buffer+720>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x200006f4 <address_buffer+736>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000704 <address_buffer+752>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000714 <address_buffer+768>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000724 <address_buffer+784>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000734 <address_buffer+800>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000744 <address_buffer+816>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000754 <address_buffer+832>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000764 <address_buffer+848>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000774 <address_buffer+864>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000784 <address_buffer+880>:        0x0001  0x0002  0x0003  0x0004  0x0005  0x0006  0x0007  0x11cb
+0x20000794 <address_buffer+896>:        0x11cc  0x11cd  0x11ce  0x11cf  0x11d0  0x11d1  0x11d2  0x11d3
+0x200007a4 <address_buffer+912>:        0x11d4  0x11d5  0x11d6  0x11d7  0x11d8  0x11d9  0x11da  0x11db
+0x200007b4 <address_buffer+928>:        0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd
+0x200007c4 <address_buffer+944>:        0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df
+0x200007d4 <address_buffer+960>:        0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1
+0x200007e4 <address_buffer+976>:        0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd
+0x200007f4 <address_buffer+992>:        0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df
+0x20000804 <address_buffer+1008>:       0x11e0  0x11e1  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
+0x20000814 <address_buffer+1024>:       0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0001
+0x20000824 <address_buffer+1040>:       0x0002  0x0003  0x0004  0x0005  0x0006  0x0007  0x11cb  0x11cc
+0x20000834 <address_buffer+1056>:       0x11cd  0x11ce  0x11cf  0x11d0  0x11d1  0x11d2  0x11d3  0x11d4
+0x20000844 <address_buffer+1072>:       0x11d5  0x11d6  0x11d7  0x11d8  0x11d9  0x11da  0x11db  0x11dc
+0x20000854 <address_buffer+1088>:       0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de
+
+So it runs addresses 0, 1, 2, etc, up to 0x11cf in the frist case, then starts again. I saw exactly this
+when I was doing the ROM emulator. Lots of zeroes appear, then it starts again, getting a bit further.
+A few more zeroes, then it starts again. Eventually, after 3 or 4 iterations, it keeps going and the 
+ROM program runs. I don't know why the Z80/Spectrum does this, but it appears consistent.
+	     */
+
+	    /* Read the address bus, stash value while there's room in the buffer */
+	    address_buffer[buffer_index++] = address_bus;
+	    if( buffer_index == ADDR_BUF_SIZE )
+	      break;
+
+	    /* Wait for the Z80 complete the memory request */
+	    while( gpio_get( GPIO_Z80_MREQ ) == 0 );
+
+	  } /* Endif it's a RD */
+	  
+	} /* Endif if it's a MREQ */
+
+      } /* End while P2 signal */
+
+      /* Send response, whatever that is */
+      /* Test data starts with a 32 bit number, which is the length of what follows */
+      //     uint32_t length = sizeof(test_counter);
+      // ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&length, sizeof(length) );
+
+      /* Send number of bytes we have in the buffer */
+
+      /* Send buffer load */
+      //memcpy( address_buffer, (uint8_t*)&test_counter, sizeof(test_counter) );
+      //ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)address_buffer, length );
+       
+      /* Back to top of loop, wait for next test run signal */
+      //test_counter++;
+#endif
     }
     break;
 
