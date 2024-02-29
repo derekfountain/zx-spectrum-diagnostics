@@ -81,9 +81,6 @@ static void test_blipper( void )
   gpio_put( GPIO_P2_BLIPPER, 0 );
 }
 
-#define ADDR_BUF_SIZE 2048
-static uint16_t address_buffer[ADDR_BUF_SIZE*2];
-
 /*
  */
 void main( void )
@@ -149,13 +146,27 @@ void main( void )
     uint32_t test_type = PICO_COMM_TEST_ABUS;
     ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&test_type, sizeof(test_type) );
 
+    /*
+     * Pico1 has told this Pico to run a test. The requested test type is in test_type.
+     * The signal to start the test is the GPIO_P2_SIGNAL going high, which is how the
+     * first Pico drives it when it wants the test to start.
+     */
+
+    /* Read the GPIO_P2_SIGNAL, wait for it to go high */
+    while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
+
+    /* Go! Run the requested test */
     switch( test_type )
     {
     case PICO_COMM_TEST_ABUS:
     {
-    /* Read the GPIO_P2_SIGNAL, wait for it to go high */
-      while( gpio_get( GPIO_P2_SIGNAL ) == 0 );
-    
+      /*
+       * Pico1 has asked for the address bus test. This test checks each of the Z80 address
+       * lines and confirms each one is seeing going from high to low, and low to high.
+       * As the Spectrum starts up you'd expect to see all lines make these transitions.
+       * If one or more doesn't, that implies a stuck or unconnected address line.
+       */
+
       /*
        * Address bus test, just monitor the address lines and confirm they got low->high and high->low
        * Loop while the first Pico is holding the "test running" signal
@@ -248,12 +259,20 @@ void main( void )
 
     case PICO_COMM_TEST_ROM:
     {
-#if 0
+#define ADDR_BUF_SIZE 2048
+      static uint16_t address_buffer[ADDR_BUF_SIZE];
+
       /* Clear buffer */
       uint32_t buffer_index = 0;
       for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
 	address_buffer[buffer_index] = 0;
 
+      uint32_t dummy_result = 101;
+
+      /* Send response  - send buffer load */
+      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&dummy_result, sizeof(dummy_result) );
+
+#if 0
       buffer_index = 0;
 
       /* Loop while the first Pico is holding the "test running" signal */

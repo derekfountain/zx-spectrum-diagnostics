@@ -47,6 +47,8 @@
 #include "page_abus.h"
 #include "page_rom.h"
 
+#include "picoputer.pio.h"
+
 static uint8_t input1_pressed = 0;
 
 /* Set of pages, press button 1 to cycle these */
@@ -100,6 +102,18 @@ typedef enum
   RESULT_READY,
 }
 SHOW_RESULT_FLAG;
+
+/* Inbound link, from second pico which does the address bus stuff */
+static       int                linkin_sm;
+static const PIO                linkin_pio      = pio1;
+static const enum gpio_function linkin_function = GPIO_FUNC_PIO1;
+static       uint               linkin_offset;
+
+/* Outbound link, to second pico which does the address bus stuff */
+static       int                linkout_sm;
+static const PIO                linkout_pio      = pio1;
+static const enum gpio_function linkout_function = GPIO_FUNC_PIO1;
+static       uint               linkout_offset;
 
 /* Paging, for the user interface */
 typedef struct
@@ -319,7 +333,7 @@ static void core1_main( void )
       abus_page_entry();
 
       /* Run the address bus tests and populate the result lines for the display */
-      abus_page_run_tests();
+      abus_page_run_tests( linkin_pio, linkout_pio, linkin_sm, linkout_sm );
 
       /* Tear down address bus tests */
       abus_page_exit();
@@ -342,7 +356,7 @@ static void core1_main( void )
       rom_page_entry();
       
       /* Run the ROM sequential bytes test and populate the result lines for the display */
-      rom_page_run_seq_test();
+      rom_page_run_seq_test( linkin_pio, linkout_pio, linkin_sm, linkout_sm );
 
       /* Tear down ROM tests */
       rom_page_exit();
@@ -367,8 +381,25 @@ void main( void )
 
   sleep_ms( 1000 );
 
+  /* Inbound link, from address bus handling Pico2. The GPIO is labelled from Pico2's view */
+  gpio_set_function(GPIO_P2_LINKOUT, linkin_function);    
+
+  linkin_sm       = pio_claim_unused_sm(linkin_pio, true);
+  linkin_offset   = pio_add_program(linkin_pio, &picoputerlinkin_program);
+  picoputerlinkin_program_init(linkin_pio, linkin_sm, linkin_offset, GPIO_P2_LINKOUT);
+
+  /* Outbound link, to address bus handling Pico2. The GPIO is labelled from Pico2's view */
+  gpio_set_function(GPIO_P2_LINKIN, linkout_function);    
+
+  linkout_sm      = pio_claim_unused_sm(linkout_pio, true);
+  linkout_offset  = pio_add_program(linkout_pio, &picoputerlinkout_program);
+  picoputerlinkout_program_init(linkout_pio, linkout_sm, linkout_offset, GPIO_P2_LINKIN);
+
   /* Initialise OLED screen with default font */
   init_oled( NULL );
+
+  /* Set up the GPIO which pokes the other Pico */
+  gpio_init( GPIO_P1_SIGNAL ); gpio_set_dir( GPIO_P1_SIGNAL, GPIO_OUT ); gpio_put( GPIO_P1_SIGNAL, 0 );
 
   /* Blipper, for the scope */
   gpio_init( GPIO_P1_BLIPPER ); gpio_set_dir( GPIO_P1_BLIPPER, GPIO_OUT ); gpio_put( GPIO_P1_BLIPPER, 0 );
