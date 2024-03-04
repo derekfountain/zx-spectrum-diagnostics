@@ -29,6 +29,8 @@
  *  continue
  */
 
+#define _GNU_SOURCE      /* Expose memmem() in string.h */
+
 #include "pico/platform.h"
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
@@ -259,6 +261,13 @@ void main( void )
 
     case PICO_COMM_TEST_ROM:
     {
+      /*
+       * With ADDR_BUF_SIZE=2048:
+       *
+       * (gdb) p sizeof(address_buffer)
+       * $2 = 4096
+       *
+       */
 #define ADDR_BUF_SIZE 2048
       static uint16_t address_buffer[ADDR_BUF_SIZE];
 
@@ -267,16 +276,32 @@ void main( void )
       for(buffer_index=0; buffer_index<ADDR_BUF_SIZE;buffer_index++)
 	address_buffer[buffer_index] = 0;
 
-      uint32_t dummy_result = 101;
+      /*
+       * This is the sequence of addresses the Z80 reads from as it starts running
+       * the ROM program. The instruction at 0x11E0 is a jump back to the start of
+       * the loop which does th RAM check. I chose that as the rather arbitrary
+       * point to stop. If this sequence appears on the address bus the Z80 and
+       * ROM are clearly communicating at least reasonably well.
+       *
+       * (gdb) p sizeof(expected_sequence)
+       * $1 = 60
+       *
+       */
+      uint16_t expected_sequence[] = {
+	0x0000, 0x0001, 0x0002, 0x0003,
+	0x0004, 0x0005, 0x0006, 0x0007,
+	0x11cb, 0x11cc, 0x11cd, 0x11ce,
+	0x11cf, 0x11d0, 0x11d1, 0x11d2,
+	0x11d3, 0x11d4, 0x11d5, 0x11d6,
+	0x11d7, 0x11d8, 0x11d9, 0x11da,
+	0x11db, 0x11dc, 0x11dd, 0x11de,
+	0x11df, 0x11e0
+      };
 
-      /* Send response  - send buffer load */
-      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&dummy_result, sizeof(dummy_result) );
-
-#if 0
       buffer_index = 0;
 
       /* Loop while the first Pico is holding the "test running" signal */
-      while( gpio_get( GPIO_P2_SIGNAL ) )
+      while( (gpio_get( GPIO_P2_SIGNAL ) == 1) && (buffer_index < ADDR_BUF_SIZE) )
       {
 	/* Wait for a memory request to start */
 	if( gpio_get( GPIO_Z80_MREQ ) == 0 )
@@ -288,6 +313,7 @@ void main( void )
 	    /* OK, a Z80 memory read has begun, the address is already on the address bus */
 	    uint16_t address_bus = gpio_get_all() & 0xFFFF;
 
+#if 0
 	    /*
 	     * FIXME This collects the addresses the Z80 puts on the address bus.
 	     * Or at least, those that appear on the address bus. It shows a restarting
@@ -330,35 +356,30 @@ when I was doing the ROM emulator. Lots of zeroes appear, then it starts again, 
 A few more zeroes, then it starts again. Eventually, after 3 or 4 iterations, it keeps going and the 
 ROM program runs. I don't know why the Z80/Spectrum does this, but it appears consistent.
 	     */
+#endif
 
 	    /* Read the address bus, stash value while there's room in the buffer */
 	    address_buffer[buffer_index++] = address_bus;
-	    if( buffer_index == ADDR_BUF_SIZE )
-	      break;
 
-	    /* Wait for the Z80 complete the memory request */
+	    /* Wait for the Z80 to complete the memory request */
 	    while( gpio_get( GPIO_Z80_MREQ ) == 0 );
 
 	  } /* Endif it's a RD */
 	  
 	} /* Endif if it's a MREQ */
 
-      } /* End while P2 signal */
+      } /* End while P2 signal is held and the buffer isn't empty */
 
-      /* Send response, whatever that is */
-      /* Test data starts with a 32 bit number, which is the length of what follows */
-      //     uint32_t length = sizeof(test_counter);
-      // ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&length, sizeof(length) );
+      /* Now try to find the expected sequence of addresses in the buffer of collected ones */
+      uint32_t rom_sequence_match = 0;
 
-      /* Send number of bytes we have in the buffer */
+      if( memmem( address_buffer, sizeof( address_buffer ), expected_sequence, sizeof( expected_sequence ) ) != NULL )
+      {
+	rom_sequence_match = 1;
+      }
 
-      /* Send buffer load */
-      //memcpy( address_buffer, (uint8_t*)&test_counter, sizeof(test_counter) );
-      //ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)address_buffer, length );
-       
-      /* Back to top of loop, wait for next test run signal */
-      //test_counter++;
-#endif
+      /* Send response  - send buffer load */
+      ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&rom_sequence_match, sizeof(uint32_t) );
     }
     break;
 

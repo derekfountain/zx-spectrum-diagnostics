@@ -89,11 +89,19 @@ void rom_page_run_seq_test( PIO linkin_pio, PIO linkout_pio, int linkin_sm, int 
    */
   cancel_alarm( rom_alarm_id );
 
-  uint32_t dummy_result;
-  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&dummy_result, sizeof(dummy_result) );
+  /* Other Pico sends a yay or nay as to whether the sequence of ROM reads was found */
+  uint32_t rom_sequence_match;
+  ui_link_receive_buffer( linkin_pio, linkin_sm, linkout_sm, (uint8_t*)&rom_sequence_match, sizeof(uint32_t) );
 
   /* Show the result line */
-  snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " ROM: Not ready %u", dummy_result );
+  if( rom_sequence_match )
+  {
+    snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " ROM: Read correctly" );
+  }
+  else
+  {
+    snprintf( result_line_txt[0], WIDTH_OLED_CHARS, " ROM: Not read" );
+  }
 
   /*
    * Repeat test a regular intervals, but don't do it too fast in case the comms
