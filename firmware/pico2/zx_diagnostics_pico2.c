@@ -42,6 +42,7 @@
 #include "link_common.h"
 #include "picoputer.pio.h"
 
+/* Test indicators, one of these is sent by Pico1 to say which test we are to run */
 #define PICO_COMM_TEST_ABUS 0x01020304
 #define PICO_COMM_TEST_ROM  0x04030201
 
@@ -52,38 +53,17 @@ static void test_blipper( void )
   __asm volatile ("nop");
   __asm volatile ("nop");
   __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
-  __asm volatile ("nop");
   gpio_put( GPIO_P2_BLIPPER, 0 );
 }
 
 /*
+ * Code for the second Pico. This one has the address bus lines connected
+ * to GPIOs 0-15. It sits waiting for an instruction from Pico1 to arrive
+ * on the Pico-Pico link. That instruction consists of an indication of
+ * which test it's expected to run. Once that's arrived it spins on a GPIO
+ * controlled by Pico1. The moment that GPIO goes high, the test starts.
+ * The test continues to run until the GPIO is pulled low again by Pico1.
+ * It reports the result then goes back to waiting.
  */
 void main( void )
 {
@@ -259,14 +239,39 @@ void main( void )
     }
     break;
 
+
+
     case PICO_COMM_TEST_ROM:
     {
+      /*
+       * Pico1 has asked for the ROM test. This test checks that the Z80 asks for the
+       * sequence of addresses of the start up program sequence in the Spectrum ROM,
+       * thus proving that the Z80 is working and the ROM is supplying the instruction
+       * bytes correctly.
+       *
+       * The Z80 is allowed to run (by Pico1) then the Z80 control bus lines are monitored
+       * looking for memory reads. For each memory read, the address of the memory location
+       * is stored away. The buffer for storing those addresses isn't very large, this
+       * only checks the first few dozen expected instructions are fetched from the ROM.
+       * It's assumed that if the Z80 runs the first few instructions from the ROM
+       * correctly then everything must be running as expected.
+       *
+       * A complication is that the Z80 appears to restart several times. Looking at the
+       * contents of the addresses buffer it shows it starts at 0000, goes to 0001, then
+       * 0002, and then there's a burst of 0000s and it starts again. This happens about
+       * 10 times, each restart getting a bit further than the last. Eventually the Z80
+       * runs and doesn't restart. I think this is caused by jitter on the /RESET line.
+       * It doesn't really matter for this test, other than to note that the contents
+       * of the addresses buffer isn't a nice clean run from address 0000.
+       */
+
       /*
        * With ADDR_BUF_SIZE=2048:
        *
        * (gdb) p sizeof(address_buffer)
        * $2 = 4096
        *
+       * (gdb) x/1024xh address_buffer
        */
 #define ADDR_BUF_SIZE 2048
       static uint16_t address_buffer[ADDR_BUF_SIZE];
@@ -279,13 +284,14 @@ void main( void )
       /*
        * This is the sequence of addresses the Z80 reads from as it starts running
        * the ROM program. The instruction at 0x11E0 is a jump back to the start of
-       * the loop which does th RAM check. I chose that as the rather arbitrary
+       * the loop which does the RAM check. I chose that as the rather arbitrary
        * point to stop. If this sequence appears on the address bus the Z80 and
        * ROM are clearly communicating at least reasonably well.
        *
        * (gdb) p sizeof(expected_sequence)
        * $1 = 60
        *
+       * (gdb) x/128xh expected_sequence
        */
       uint16_t expected_sequence[] = {
 	0x0000, 0x0001, 0x0002, 0x0003,
@@ -306,59 +312,13 @@ void main( void )
 	/* Wait for a memory request to start */
 	if( gpio_get( GPIO_Z80_MREQ ) == 0 )
 	{
-
 	  /* Wait for a read to start, as opposed to a write */
 	  if( gpio_get( GPIO_Z80_RD ) == 0 )
 	  {
 	    /* OK, a Z80 memory read has begun, the address is already on the address bus */
 	    uint16_t address_bus = gpio_get_all() & 0xFFFF;
 
-#if 0
-	    /*
-	     * FIXME This collects the addresses the Z80 puts on the address bus.
-	     * Or at least, those that appear on the address bus. It shows a restarting
-	     * pattern, like this:
-(gdb) x/1024xh address_buffer
-0x20000674 <address_buffer+608>:        0x0000  0x0000  0x0001  0x0002  0x0003  0x0004  0x0005  0x0006
-0x20000684 <address_buffer+624>:        0x0007  0x11cb  0x11cc  0x11cd  0x11ce  0x11cf  0x0000  0x0000
-0x20000694 <address_buffer+640>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x200006a4 <address_buffer+656>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x200006b4 <address_buffer+672>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x200006c4 <address_buffer+688>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x200006d4 <address_buffer+704>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x200006e4 <address_buffer+720>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x200006f4 <address_buffer+736>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000704 <address_buffer+752>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000714 <address_buffer+768>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000724 <address_buffer+784>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000734 <address_buffer+800>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000744 <address_buffer+816>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000754 <address_buffer+832>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000764 <address_buffer+848>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000774 <address_buffer+864>:        0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000784 <address_buffer+880>:        0x0001  0x0002  0x0003  0x0004  0x0005  0x0006  0x0007  0x11cb
-0x20000794 <address_buffer+896>:        0x11cc  0x11cd  0x11ce  0x11cf  0x11d0  0x11d1  0x11d2  0x11d3
-0x200007a4 <address_buffer+912>:        0x11d4  0x11d5  0x11d6  0x11d7  0x11d8  0x11d9  0x11da  0x11db
-0x200007b4 <address_buffer+928>:        0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd
-0x200007c4 <address_buffer+944>:        0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df
-0x200007d4 <address_buffer+960>:        0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1
-0x200007e4 <address_buffer+976>:        0x11dc  0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd
-0x200007f4 <address_buffer+992>:        0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de  0x11df
-0x20000804 <address_buffer+1008>:       0x11e0  0x11e1  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000
-0x20000814 <address_buffer+1024>:       0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0000  0x0001
-0x20000824 <address_buffer+1040>:       0x0002  0x0003  0x0004  0x0005  0x0006  0x0007  0x11cb  0x11cc
-0x20000834 <address_buffer+1056>:       0x11cd  0x11ce  0x11cf  0x11d0  0x11d1  0x11d2  0x11d3  0x11d4
-0x20000844 <address_buffer+1072>:       0x11d5  0x11d6  0x11d7  0x11d8  0x11d9  0x11da  0x11db  0x11dc
-0x20000854 <address_buffer+1088>:       0x11dd  0x11de  0x11df  0x11e0  0x11e1  0x11dc  0x11dd  0x11de
-
-So it runs addresses 0, 1, 2, etc, up to 0x11cf in the frist case, then starts again. I saw exactly this
-when I was doing the ROM emulator. Lots of zeroes appear, then it starts again, getting a bit further.
-A few more zeroes, then it starts again. Eventually, after 3 or 4 iterations, it keeps going and the 
-ROM program runs. I don't know why the Z80/Spectrum does this, but it appears consistent.
-	     */
-#endif
-
-	    /* Read the address bus, stash value while there's room in the buffer */
+	    /* Read the address bus, stash the value while there's room in the buffer */
 	    address_buffer[buffer_index++] = address_bus;
 
 	    /* Wait for the Z80 to complete the memory request */
@@ -373,12 +333,13 @@ ROM program runs. I don't know why the Z80/Spectrum does this, but it appears co
       /* Now try to find the expected sequence of addresses in the buffer of collected ones */
       uint32_t rom_sequence_match = 0;
 
+      /* Find the expected address sequence in the collected address sequence */
       if( memmem( address_buffer, sizeof( address_buffer ), expected_sequence, sizeof( expected_sequence ) ) != NULL )
       {
 	rom_sequence_match = 1;
       }
 
-      /* Send response  - send buffer load */
+      /* Report result to the other Pico so it can update the screen */
       ui_link_send_buffer( linkout_pio, linkout_sm, linkin_sm, (uint8_t*)&rom_sequence_match, sizeof(uint32_t) );
     }
     break;
