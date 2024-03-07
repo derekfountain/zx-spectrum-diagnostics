@@ -137,6 +137,7 @@ void voltage_page_test_minus5v( void )
 {
   adc_select_input( 0 );
   float reading = ((adc_read() * conversion_factor) / _minus5_ratio) - 5.00;
+  // float reading = adc_read();
   snprintf( result_line_txt[2], WIDTH_OLED_CHARS, "    -5V: %0.3fV", reading );
 
   average_min5v[average_index] = reading;
