@@ -82,6 +82,22 @@ can tell when a valid address is ready for it to pick up.
 16, 17 and 18. Matches the modification to the schematic and PCB
 layout for v1,2.
 
+It needs a GND pad on the top or side. Linking up a scope probe is
+to ZX GND currently rather hard.
+: Needs doing
+
+Due to the standard 1N4148 diodes I used for clamping the -5V input
+to the Pico, I have the possibility of -0.7V going into the ADC.
+The minimum allowed by the Pico is -0.5V. Change the clamping diodes
+to schottky ones to keep the clamp at -0.3V to -0.5V.
+: Needs doing
+
+The top of the -5V voltae divider comes from +5V, which is from the
+system under test and hence isn't reliable. Change it to +3.3V from
+the Pico, which is precise. Rebalance the voltage divider and ensure
+it works as expected.
+: Needs doing
+
 
 
 v1.2 Third Pico based board, not sent yet

@@ -44,7 +44,6 @@ It makes sense. V(measured) is the voltage across one resistor, so
 if the resistors are the same then double that is the voltage across
 both resistors, which is +5V to -5V.
 
-
 AM added that a diode is needed to protect it in case -5V is there
 but +5 isn't. And another for the positive side.
 
@@ -81,19 +80,22 @@ Forward voltage of 1N4148 is 0.72V so that needs to be taken
 into account, somehow.
 
 
+ Extra note, though. On the Spectrum the 5V comes from the 7805, and
+ isn't particularly precise. I have 4.85V on one of mine, and the -5V
+ circuit is generating -5.01V. Which means there's 9.86V across the
+ whole divider and the centre point is at 4.93V. Subtracting 5V from
+ that results in -0.07V. That's what's going into the ADC, which
+ reads it at zero, hence the final output value is an unmoving -5.000V.
+ One of my boards has a measured -0.270V at the divider mid-point.
 
+ Since the only 5V I have is actually from the system under test, I'm
+ going to change the top of the divider to the 3V3 from the Pico, which
+ is much more precise. I'll need to tweak the divider to keep it
+ balanced.
 
-Test pages
-==========
+ Further, the Pico pad can only tolerate a minimum of -0.5V, so I need
+ to be careful. The clamping diodes would typically have a forward
+ voltage of 0.7V so I could end up with -0.7V going into the Pico.
+ I'll change the diodes to schottky ones. The lower VF should keep
+ that clamped voltage at a minimum of -0.3V to -0.5V.
 
-UI will consist of pages. Flick between pages with the buttons.
-
-Page 1 will be voltages
-Page 2 will be Z80 control bus
-...
-
-Enter page function
-Exit page function
-Run tests function
-Pause between test runs (ms)
-Next page?
