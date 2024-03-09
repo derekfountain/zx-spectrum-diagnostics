@@ -99,3 +99,82 @@ into account, somehow.
  I'll change the diodes to schottky ones. The lower VF should keep
  that clamped voltage at a minimum of -0.3V to -0.5V.
 
+
+I need to change the voltage divider to have the Pico's 3V3 at the top
+and the ZX -5V at the bottom. I want to restrict the centre point,
+which is the input to the ADC, to 0V to 3V3 where possible, and
+definitely for each typical use case. Trial and error led me to
+R1=390R and R2=1K5.
+
+Using Digikey's voltage divider calculator, I worked out the following:
+
+Typical:
+
+3V3 to -5V0 = 8V3 total drop
+
+R1=390R R2=1K5
+R1 drops 1.7126984127
+R2 drops 6.5873015873
+
+Vout = 3.3 - 1.7126984127 = 1.58730 into the ADC
+
+
+
+
+-5V broken, at 0V:
+
+3V3 to 0V = 3V3 total drop
+
+R1=390R R2=1K5
+R1 drops 0.680952381
+R2 drops 2.619047619
+
+Vout = 3.3 - 0.680952381 = 2.619047619 into the ADC
+
+
+
+
+-5V broken, at +1V:
+
+3V3 to 1V = 2V3 total drop
+
+R1=390R R2=1K5
+R1 drops 1.4746031746
+R2 drops 1.8253968254
+
+Vout = 3.3 - 1.4746031746 = 1.8253968254 into the ADC
+
+
+
+
+-5V broken, at +5V:
+
+3V3 to 5V = -1.7 total drop
+
+R1=390R R2=1K5
+R1 drops -0.350794
+R2 drops -1.3492063492
+
+Vout = 3.3 - -0.350794 = 3.650794 into the ADC
+If that makes sense then the clamping diodes would be required
+
+
+
+
+
+-5V broken, at +12V:
+
+3V3 to 12V = -8.7 total drop
+
+R1=390R R2=1K5
+R1 drops -1.79524
+R2 drops -6.9047619048
+
+Vout = 3.3 - -1.79524 = 5.09524 into the ADC
+If that makes sense then the clamping diodes would be required
+
+
+
+These negative voltages aren't intuative, so I have to trust the equation.
+I've little clue if what's going to come out of the thing is what I've
+calculated.
