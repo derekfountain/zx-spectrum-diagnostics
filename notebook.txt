@@ -121,6 +121,27 @@ Vout = 3.3 - 1.7126984127 = 1.58730 into the ADC
 
 
 
+Measured on AM board:
+
+3.27V to -5.44V = 8.71V total drop
+
+R1=392R R2=1498R
+
+Calculator says:
+R1 drops 1.80652
+R2 drops 6.90348
+
+Vout = 3.27 - 1.80652 = 1.46348V into the ADC
+
+Measured on DVM:
+R1 drops 1.794V
+R2 drops 6.900V
+
+Vout = 3.27 - 1.794 = 1.476V should be into the ADC, measured 1.478V
+So that works very well
+
+
+
 -5V broken, at 0V:
 
 3V3 to 0V = 3V3 total drop
