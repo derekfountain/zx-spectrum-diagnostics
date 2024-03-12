@@ -5,8 +5,8 @@
   (paper "A4")
 
   (title_block
-    (title "ZX Spectrum Diagnostics")
-    (date "2023-11-30")
+    (title "ZX Spectrum Diagnostics Board PGA2040")
+    (date "2024-03-12")
     (rev "1.1")
   )
 

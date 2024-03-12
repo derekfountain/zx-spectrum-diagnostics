@@ -6,7 +6,7 @@
 
   (title_block
     (title "ZX Spectrum Diagnostics Board PGA2040")
-    (date "2024-02-19")
+    (date "2024-03-12")
   )
 
   (lib_symbols
@@ -1744,6 +1744,15 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid 5d0f9b5c-5a40-4185-be2e-11a0072fb0b6)
   )
+  (text "Not Complete\nSee notes" (at 37.592 116.078 0)
+    (effects (font (size 15 15) (thickness 3) bold) (justify left bottom))
+    (uuid 69ce9b94-25ba-45f4-9cdd-dd99f10e4cfb)
+  )
+  (text "I copied the schematic from an earlier version of the Pico design, and imported the symbol for the PGA2040. I then decided not to\nbother. If this is ever picked up, reimport the Pico design. There were some changes to the -5V voltage divider. The Picos then\nneed to be replaced with PGA2040s, programming headers need adding, and so on. No work was really done here."
+    (at 177.8 171.958 0)
+    (effects (font (size 1 1)) (justify left bottom))
+    (uuid c0543305-5fa5-4012-a2db-578a2137d653)
+  )
   (text "Typically drops 10V from +5V to -5V, sample point\nwould read 0V. When I know +5V (Vpos) I can calculate the\n-5V (Vmin) value with Vmin = 2*NEG5_DIV - Vpos\n\nIf -5V is absent (i.e. at 0V) the divider will drop\n5V across the 2 resistors and the sample point will\nbe 2V5."
     (at 224.536 121.158 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
@@ -2819,15 +2828,15 @@
     (pin "1" (uuid 7448fa95-edc2-432d-a13e-ea76ed877852))
   )
 
-  (symbol (lib_id "PGA2404:PGA2040") (at 214.122 149.098 0) (unit 1)
+  (symbol (lib_id "PGA2404:PGA2040") (at 208.788 134.874 0) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 3eb22a98-a085-4e50-9897-1c57e9cfb002)
-    (property "Reference" "U103" (id 0) (at 242.57 128.5492 0))
-    (property "Value" "PGA2040" (id 1) (at 242.57 131.0892 0))
-    (property "Footprint" "PGA2040:PGA2040" (id 2) (at 214.122 149.098 0)
+    (property "Reference" "U103" (id 0) (at 237.236 114.3252 0))
+    (property "Value" "PGA2040" (id 1) (at 237.236 116.8652 0))
+    (property "Footprint" "PGA2040:PGA2040" (id 2) (at 208.788 134.874 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Datasheet" "" (id 3) (at 197.612 142.748 0)
+    (property "Datasheet" "" (id 3) (at 192.278 128.524 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid cbf57eac-5fbe-4beb-abfe-e2b34b7a20f4))

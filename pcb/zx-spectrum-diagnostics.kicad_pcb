@@ -90,7 +90,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "./fab1.1")
+      (outputdirectory "./fab1.2")
     )
   )
 
@@ -2186,9 +2186,9 @@
     (fp_line (start -1.6 0.4) (end -1.6 -0.8) (layer "B.Fab") (width 0.1) (tstamp 5233c6f6-58a5-4d10-aa3a-d6c5450ca679))
     (fp_line (start -1.2 0.8) (end -1.6 0.4) (layer "B.Fab") (width 0.1) (tstamp 6fa1b7aa-0772-46ae-86cd-4d102a2d8e57))
     (fp_line (start -1.6 -0.8) (end 1.6 -0.8) (layer "B.Fab") (width 0.1) (tstamp af4e7fdd-f554-43e4-a98a-93b79410c242))
-    (pad "1" smd roundrect (at -1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.175439)
+    (pad "1" smd roundrect (at -1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1754392982)
       (net 3 "3V3_PICO1") (pinfunction "K") (pintype "passive") (tstamp c755f1bd-35f0-46c7-ba2c-d724149fb8d6))
-    (pad "2" smd roundrect (at 1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.175439)
+    (pad "2" smd roundrect (at 1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1754392982)
       (net 4 "MIN5V_DIV") (pinfunction "A") (pintype "passive") (tstamp e3d56679-caa8-4516-b038-f7c362fd5709))
     (model "${KICAD6_3DMODEL_DIR}/Diode_SMD.3dshapes/D_1206_3216Metric.wrl"
       (offset (xyz 0 0 0))
@@ -2852,9 +2852,9 @@
     (fp_line (start -1.6 0.4) (end -1.6 -0.8) (layer "B.Fab") (width 0.1) (tstamp 5e68b7f1-e34d-4a0d-bc48-971fc321fb00))
     (fp_line (start 1.6 -0.8) (end 1.6 0.8) (layer "B.Fab") (width 0.1) (tstamp 78056f4d-5cfe-465d-af8a-17ac25511ffc))
     (fp_line (start -1.6 -0.8) (end 1.6 -0.8) (layer "B.Fab") (width 0.1) (tstamp 967a3b8a-9eb6-411b-848e-590dcff9a080))
-    (pad "1" smd roundrect (at -1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.175439)
+    (pad "1" smd roundrect (at -1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1754392982)
       (net 4 "MIN5V_DIV") (pinfunction "K") (pintype "passive") (tstamp 0f707a4e-5e0f-4209-ad05-f85436290d85))
-    (pad "2" smd roundrect (at 1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.175439)
+    (pad "2" smd roundrect (at 1.4875 0 180) (size 1.425 1.75) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.1754392982)
       (net 5 "GND") (pinfunction "A") (pintype "passive") (tstamp d7fdfa72-5a67-4e10-aa01-004270380605))
     (model "${KICAD6_3DMODEL_DIR}/Diode_SMD.3dshapes/D_1206_3216Metric.wrl"
       (offset (xyz 0 0 0))
