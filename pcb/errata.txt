@@ -90,13 +90,15 @@ Due to the standard 1N4148 diodes I used for clamping the -5V input
 to the Pico, I have the possibility of -0.7V going into the ADC.
 The minimum allowed by the Pico is -0.5V. Change the clamping diodes
 to schottky ones to keep the clamp at -0.3V to -0.5V.
-: Needs doing
+: Done on schematic, footprint updated on PCB
 
-The top of the -5V voltae divider comes from +5V, which is from the
+The top of the -5V voltage divider comes from +5V, which is from the
 system under test and hence isn't reliable. Change it to +3.3V from
 the Pico, which is precise. Rebalance the voltage divider and ensure
 it works as expected.
-: Needs doing
+: All done on schematic and PCB. Top of the -5V divider is now 3V3
+from the Pico, R1 is 390R and R2 remains 1K5. Code has been updated
+and tested with a patched v1.1 board, seems to work.
 
 
 
