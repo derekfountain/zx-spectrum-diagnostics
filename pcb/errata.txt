@@ -84,7 +84,7 @@ layout for v1,2.
 
 It needs a GND pad on the top or side. Linking up a scope probe is
 to ZX GND currently rather hard.
-: Needs doing
+: Done on PCB
 
 Due to the standard 1N4148 diodes I used for clamping the -5V input
 to the Pico, I have the possibility of -0.7V going into the ADC.

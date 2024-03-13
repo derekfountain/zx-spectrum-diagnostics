@@ -3,6 +3,8 @@
 This is a hardware diagnostics board for the 16K and 48K ZX Spectrum,
 based on two Raspberry Pi Pico microcontroller boards.
 
+## Status
+
 As of March 2024, v1.2 is complete.
 
 (All photos are of the v1.1 prototype board which has a few modifications.
@@ -22,16 +24,20 @@ Spectrum on. It will (repeatedly) run a set of tests on the signals it
 sees on the rear edge connector. The tests are divided into pages. Pressing
 the button advances to the next page of tests.
 
-The idea is that given a Spectrum board of unknown provenance, and
-which isn't working (an eBay purchase maybe), this board can quickly
-tell you what potential issues the board might have. Obviously it's
-limited to what it can see on the rear edge connector, so it can't
-detect broken tracks or things like that, but it can report a fair
-amount of useful information. There are no guarantees, of course.
+The idea is that given a Spectrum of unknown provenance (an eBay
+purchase maybe), and which isn't working, this device can quickly tell
+you what potential issues the Spectrum might have. Obviously it's limited
+to what it can see on the rear edge connector, so it can't detect
+broken tracks or things like that, but it can report a fair amount of
+useful information. There are no guarantees, of course.
+
+[Derek Fountain](https://www.derekfountain.org/), March 2024
+
+# Operation
 
 The Spectrum is usable when the device is displaying the voltages page.
 The tests which run on the other pages constantly reset the Spectrum
-so it can't be used.
+so it can't be used when any of those are showing.
 
 The pages, and the tests run, are as follows. You might find it useful to
 read the [Spectrum Service manual](https://spectrumforeveryone.com/wp-content/uploads/2017/08/ZX-Spectrum-Service-Manual.pdf)
@@ -167,3 +173,14 @@ where the jump goes to) and so on.
 It only samples a couple of dozen addresses to check the Z80 is following the expected
 sequence, but if it is that means the Z80, and it's control, data and address buses
 are all functioning correctly or very close to correctly.
+
+
+## ZX Signal Headers
+
+The board has 3 rows of 20 pins ready for soldering header sockets
+to. (They're labelled J201, J202 and J203.) The prototype board shown
+in the photos has two of these rows populated with sockets. All except
+one (~12V) of the Spectrum's edge connector signals are brought out to
+these connectors, and so they allow for jumper wires to be inserted
+which in turn allows for simple connection to a meter or oscilloscope.
+I found this very handy.
