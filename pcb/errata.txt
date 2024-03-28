@@ -102,5 +102,22 @@ and tested with a patched v1.1 board, seems to work.
 
 
 
-v1.2 Third Pico based board, not sent yet
-=========================================
+v1.2 Third Pico based board
+===========================
+
+A couple of extraneous P1/P2 blipper labels in the silkscreen need
+removing.
+: Done
+
+The silkscreen for J202 had (the duplicated) MREQ, RD and CLK
+mislabelled.
+: Done
+
+
+
+v1.3 Fourth Pico based board
+============================
+
+I haven't had one of these made up yet. So far it's only silkscreen
+tweaks.
+
