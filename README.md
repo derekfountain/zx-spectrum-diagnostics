@@ -24,6 +24,13 @@ Spectrum on. It will (repeatedly) run a set of tests on the signals it
 sees on the rear edge connector. The tests are divided into pages. Pressing
 the button advances to the next page of tests.
 
+Click through for a brief demonstration:
+
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/3YdgdeM5kM0/0.jpg)](https://www.youtube.com/watch?v=3YdgdeM5kM0 "ZX Spectrum Hardware Diagnotics Interface")
+
+https://www.youtube.com/watch?v=3YdgdeM5kM0
+
+
 ## Status
 
 As of March 2024, v1.2 is functionally complete. The KiCAD project here is current up
@@ -226,7 +233,7 @@ NPN Transistor for /RESET
 1x [3216 SMD 1K Resistor](https://www.mouser.co.uk/ProductDetail/603-RT1206FRE071KL)
 1K Resistor for /RESET
 <br>
-3x [3216 SMD 1K5R Resistor](https://www.mouser.co.uk/ProductDetail/603-RT1206FRE071K5L)
+3x [3216 SMD 1K5 Resistor](https://www.mouser.co.uk/ProductDetail/603-RT1206FRE071K5L)
 1K5 Resistor for the voltage dividers
 <br>
 1x [3216 SMD 390R Resistor](https://www.mouser.co.uk/ProductDetail/603-RT1206FRE07390RL)
